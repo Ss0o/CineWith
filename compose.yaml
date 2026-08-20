@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USERNAME:?DB_USERNAME is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:?DB_NAME is required}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:?TMDB_ACCESS_TOKEN is required}
+      TMDB_BASE_URL: ${TMDB_BASE_URL:-https://api.themoviedb.org}
+      TMDB_LANGUAGE: ${TMDB_LANGUAGE:-}
+      TMDB_REGION: ${TMDB_REGION:-}
+      TMDB_CONNECT_TIMEOUT: ${TMDB_CONNECT_TIMEOUT:-2s}
+      TMDB_READ_TIMEOUT: ${TMDB_READ_TIMEOUT:-5s}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}
+      FRONTEND_MEMBER_REDIRECT_URI: ${FRONTEND_MEMBER_REDIRECT_URI:-http://localhost:5173/}
+      FRONTEND_SIGNUP_REDIRECT_URI: ${FRONTEND_SIGNUP_REDIRECT_URI:-http://localhost:5173/signup}
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:
