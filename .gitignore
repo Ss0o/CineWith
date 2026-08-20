@@ -38,3 +38,5 @@ out/
 
 # Local secrets
 .env
+AGENTS.md
+CLAUDE.md
