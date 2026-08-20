@@ -1,0 +1,64 @@
+// community-service V1 데이터 모델의 ERD 설계 원본이다.
+// 기능 정확성과 단순성을 우선하며, 측정되지 않은 성능 문제를 위한
+// Index, 비정규화 컬럼, Cache/Redis용 컬럼, Cursor Pagination용 컬럼을 추가하지 않는다.
+// 이 관계 정의는 JPA 연관관계의 방향이나 Cascade 설정을 결정하지 않는다.
+
+Table member {
+  id bigint [pk]
+  provider varchar [not null, note: 'OAuth2 인증 공급자']
+  provider_id varchar [not null, note: '공급자 사용자 식별자. Google에서는 sub']
+  email varchar [note: '회원 식별자로 사용하지 않으며 UNIQUE 제약 없음']
+  nickname varchar [not null]
+  created_at timestamptz [not null, note: 'UTC 절대 시점. PostgreSQL target type은 timestamp with time zone']
+
+  indexes {
+    (provider, provider_id) [unique]
+    nickname [unique]
+  }
+
+  Note: '커뮤니티 가입이 완료된 사용자. OAuth2 회원은 email이 아니라 provider와 provider_id 조합으로 식별한다.'
+}
+
+Table movie {
+  id bigint [pk, note: '서비스 내부 영화 식별자']
+  tmdb_id bigint [not null, unique, note: 'TMDB 영화 식별자']
+  title varchar [not null]
+  poster_path varchar
+  release_date date
+  created_at timestamptz [not null, note: 'UTC 절대 시점']
+
+  Note: 'TMDB 전체 영화를 미리 저장하지 않는다. 실제 Review가 작성된 Movie의 최소 정보만 저장하며 서비스 id와 tmdb_id를 분리한다.'
+}
+
+Table review {
+  id bigint [pk]
+  member_id bigint [not null]
+  movie_id bigint [not null]
+  title varchar [not null]
+  content text [not null]
+  rating integer [not null, note: '내부 표현은 1~10 정수이며 사용자 표현은 0.5~5.0']
+  created_at timestamptz [not null, note: 'UTC 절대 시점']
+  updated_at timestamptz [note: 'UTC 절대 시점']
+
+  indexes {
+    (member_id, movie_id) [unique]
+  }
+
+  Note: '한 Member는 같은 Movie에 Review를 하나만 작성할 수 있다. Movie 평균 평점과 Review 개수는 저장하지 않는다.'
+}
+
+Table comment {
+  id bigint [pk]
+  member_id bigint [not null]
+  review_id bigint [not null]
+  content text [not null]
+  created_at timestamptz [not null, note: 'UTC 절대 시점']
+  updated_at timestamptz [note: 'UTC 절대 시점']
+
+  Note: 'Comment는 반드시 하나의 Member와 Review에 속한다. 직접 삭제는 Hard Delete이며 Review 삭제 시 소속 Comment도 함께 삭제한다. 삭제 구현 방식은 아직 결정하지 않는다.'
+}
+
+Ref: review.member_id > member.id
+Ref: review.movie_id > movie.id
+Ref: comment.member_id > member.id
+Ref: comment.review_id > review.id
