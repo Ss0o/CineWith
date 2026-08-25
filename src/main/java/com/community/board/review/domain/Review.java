@@ -15,6 +15,7 @@ import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -28,8 +29,9 @@ import java.util.Objects;
 )
 public class Review {
 
-    private static final int MIN_RATING = 1;
-    private static final int MAX_RATING = 10;
+    private static final BigDecimal MIN_RATING = new BigDecimal("0.5");
+    private static final BigDecimal MAX_RATING = new BigDecimal("5.0");
+    private static final BigDecimal RATING_STEP = new BigDecimal("0.5");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,8 +51,8 @@ public class Review {
     @Column(nullable = false, columnDefinition = "text")
     private String content;
 
-    @Column(nullable = false)
-    private Integer rating;
+    @Column(nullable = false, precision = 2, scale = 1)
+    private BigDecimal rating;
 
     @Column(name = "created_at", nullable = false)
     @JdbcTypeCode(SqlTypes.TIMESTAMP_WITH_TIMEZONE)
@@ -68,7 +70,7 @@ public class Review {
             Movie movie,
             String title,
             String content,
-            Integer rating,
+            BigDecimal rating,
             Instant createdAt
     ) {
         this.member = Objects.requireNonNull(member, "member must not be null");
@@ -85,15 +87,39 @@ public class Review {
             Movie movie,
             String title,
             String content,
-            Integer rating
+            BigDecimal rating
     ) {
         return new Review(member, movie, title, content, rating, Instant.now());
     }
 
-    private static Integer validateRating(Integer rating) {
-        Objects.requireNonNull(rating, "rating must not be null");
-        if (rating < MIN_RATING || rating > MAX_RATING) {
-            throw new IllegalArgumentException("rating must be between 1 and 10");
+    public void update(String title, String content, BigDecimal rating) {
+        if (title == null && content == null && rating == null) {
+            throw new InvalidReviewUpdateException();
+        }
+        if (title != null) {
+            if (title.isBlank()) {
+                throw new InvalidReviewUpdateException();
+            }
+            this.title = title;
+        }
+        if (content != null) {
+            if (content.isBlank()) {
+                throw new InvalidReviewUpdateException();
+            }
+            this.content = content;
+        }
+        if (rating != null) {
+            this.rating = validateRating(rating);
+        }
+        this.updatedAt = Instant.now();
+    }
+
+    private static BigDecimal validateRating(BigDecimal rating) {
+        if (rating == null
+                || rating.compareTo(MIN_RATING) < 0
+                || rating.compareTo(MAX_RATING) > 0
+                || rating.remainder(RATING_STEP).compareTo(BigDecimal.ZERO) != 0) {
+            throw new InvalidReviewRatingException();
         }
         return rating;
     }
@@ -118,7 +144,7 @@ public class Review {
         return content;
     }
 
-    public Integer getRating() {
+    public BigDecimal getRating() {
         return rating;
     }
 

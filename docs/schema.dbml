@@ -36,7 +36,7 @@ Table review {
   movie_id bigint [not null]
   title varchar [not null]
   content text [not null]
-  rating integer [not null, note: '내부 표현은 1~10 정수이며 사용자 표현은 0.5~5.0']
+  rating numeric(2,1) [not null, note: 'API, 도메인, DB 모두 0.5~5.0이며 0.5 단위']
   created_at timestamptz [not null, note: 'UTC 절대 시점']
   updated_at timestamptz [note: 'UTC 절대 시점']
 

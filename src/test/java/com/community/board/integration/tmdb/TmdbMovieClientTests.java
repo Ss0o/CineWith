@@ -1,6 +1,7 @@
 package com.community.board.integration.tmdb;
 
 import com.community.board.integration.tmdb.exception.MovieClientAuthenticationException;
+import com.community.board.integration.tmdb.exception.MovieClientException;
 import com.community.board.integration.tmdb.exception.MovieClientUnavailableException;
 import com.community.board.integration.tmdb.exception.MovieNotFoundException;
 import com.community.board.movie.client.model.MovieDetail;
@@ -16,6 +17,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -147,6 +149,26 @@ class TmdbMovieClientTests {
         MovieDetail result = movieClient.getMovie(1L);
 
         assertThat(result.releaseDate()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void convertsInvalidReleaseDateToMovieClientException() {
+        server.expect(requestTo("https://tmdb.test/3/movie/1?language=ko-KR"))
+                .andRespond(withSuccess("""
+                        {
+                          "id": 1,
+                          "title": "Invalidly Dated Movie",
+                          "poster_path": null,
+                          "release_date": "not-a-date"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> movieClient.getMovie(1L))
+                .isExactlyInstanceOf(MovieClientException.class)
+                .isNotInstanceOf(DateTimeParseException.class)
+                .hasCauseInstanceOf(DateTimeParseException.class)
+                .hasMessage("TMDB 응답의 개봉일을 처리할 수 없습니다.");
         server.verify();
     }
 

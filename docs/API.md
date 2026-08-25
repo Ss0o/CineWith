@@ -134,7 +134,7 @@ Query Parameter:
 - 접근 권한: Public
 - 성공: `200 OK`
 
-목록 Response의 정확한 필드와 페이지 메타데이터 구조는 아직 결정하지 않는다.
+목록 Response는 `content`, `page`, `size`, `totalElements`, `totalPages`를 반환한다. `content`의 각 항목은 Review Response와 같은 필드를 사용한다.
 
 ### GET /api/reviews/{reviewId}
 
@@ -157,7 +157,7 @@ Request DTO:
 | `content` | 예 | 리뷰 본문 |
 | `rating` | 예 | 사용자 관점의 `0.5`부터 `5.0`까지 `0.5` 단위 평점 |
 
-`memberId`는 Request에 포함하지 않는다. 작성자는 Spring Security 인증 컨텍스트에서 얻는다. API의 평점은 서버 내부 도메인에서 `1`부터 `10`까지의 정수로 변환한다.
+`memberId`는 Request에 포함하지 않는다. 작성자는 Spring Security 인증 컨텍스트에서 얻는다. API의 평점은 변환 없이 같은 `BigDecimal` 값으로 도메인과 DB에 저장한다.
 
 작성 흐름:
 
@@ -192,7 +192,7 @@ Request DTO:
 - `SIGNUP_REQUIRED` 또는 작성자가 아닌 `MEMBER`: `403 Forbidden`
 - 대상 리뷰 없음: `404 Not Found`
 
-PATCH에서 각 수정 가능 필드의 생략과 `null`을 어떻게 해석할지는 아직 결정하지 않는다.
+PATCH는 `title`, `content`, `rating` 중 전달된 필드만 변경하는 부분 수정이다. 생략한 필드는 기존 값을 유지하며 최소 하나 이상의 수정 필드를 전달해야 한다. 전달한 `title`과 `content`는 blank일 수 없고, 전달한 `rating`은 `0.5~5.0` 범위의 `0.5` 단위여야 한다. 세 필드의 명시적 `null`은 허용하지 않는다. `member`, `memberId`, `movie`, `movieId`, `tmdbId`, `reviewId`, `createdAt`은 수정할 수 없으며 Request에 포함하지 않는다.
 
 ### DELETE /api/reviews/{reviewId}
 
@@ -270,6 +270,8 @@ Request DTO:
 | `403 Forbidden` | 인증은 완료했으나 필요한 상태·권한·소유권이 없는 요청 |
 | `404 Not Found` | Movie, Review, Comment 등 대상이 존재하지 않음 |
 | `409 Conflict` | 닉네임 중복, 동일 Member·Movie Review 중복 |
+| `502 Bad Gateway` | TMDB 인증 실패 또는 그 밖의 잘못된 Upstream 응답 |
+| `503 Service Unavailable` | TMDB 서비스 장애 또는 통신 실패 |
 
 ## Error Response
 
@@ -293,6 +295,10 @@ Validation 오류에는 필드 오류 정보를 추가할 수 있다. 필드 오
 - Cursor Pagination은 V1에서 사용하지 않는다.
 - 실제 성능 측정으로 문제가 확인된 경우에만 다른 방식을 검토한다.
 
+## Review Response
+
+Review 생성·상세·수정과 목록의 각 항목은 `reviewId`, `tmdbId`, `movieTitle`, `authorNickname`, `title`, `content`, `rating`, `createdAt`, `updatedAt`을 반환한다. `rating`은 사용자 표현인 `0.5`부터 `5.0`까지의 값이다. Entity와 Member 내부 ID는 반환하지 않는다.
+
 ## ID 노출 정책
 
 | 리소스 | 외부 식별자 |
@@ -315,14 +321,11 @@ Member의 내부 DB ID는 일반 클라이언트 요청에서 직접 사용할 �
 
 ## Open Questions
 
-- Review 목록 Response의 정확한 필드와 페이지 메타데이터 구조
-- Review 상세 및 생성·수정 성공 Response의 정확한 필드
 - Member 가입 및 내 정보 Response의 정확한 필드
 - Movie 상세 Response에서 TMDB 필드를 어디까지 노출할지
 - Comment 목록과 개별 Comment Response의 정확한 필드
 - Comment Pagination 적용 여부
 - 닉네임, Review 제목·content, Comment content의 길이 제한
-- PATCH Request에서 필드 생략과 명시적 `null`을 구분하는 방법
 - 배포 환경별 OAuth 성공 후 프론트엔드 Redirect URL의 실제 값
 - CSRF Token 전달 API와 SPA 교환 방식
 - Error Code 명명 규칙과 Validation Field Error 구조

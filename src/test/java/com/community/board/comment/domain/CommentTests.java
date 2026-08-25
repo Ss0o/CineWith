@@ -18,7 +18,13 @@ class CommentTests {
             "commentDomainMember"
     );
     private final Movie movie = Movie.create(550L, "Fight Club", null, null);
-    private final Review review = Review.create(member, movie, "Review", "Review content", 8);
+    private final Review review = Review.create(
+            member,
+            movie,
+            "Review",
+            "Review content",
+            new java.math.BigDecimal("4.0")
+    );
 
     @Test
     void createsComment() {

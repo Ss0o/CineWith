@@ -30,7 +30,7 @@ Spring Context와 DB 없이 실행할 수 있는 순수 규칙을 우선 검증�
 
 대상:
 
-- 평점의 범위, 단위, API 표현과 내부 정수 표현 사이의 변환
+- 평점의 범위와 `0.5` 단위, API·도메인·DB 값의 일치
 - 닉네임, 리뷰 제목·본문, 댓글 본문 등 확정된 값 검증 규칙
 - 작성자 소유권 판단처럼 외부 의존성이 없는 도메인 규칙
 - 평균 평점 계산 규칙
@@ -85,7 +85,7 @@ Testcontainers PostgreSQL에서 실제 Repository, Entity Mapping, DB Constraint
 - 리뷰 삭제 시 소속 댓글 삭제
 - 동시 또는 우회 요청에서도 지켜져야 하는 최종 데이터 무결성
 
-리뷰 삭제 구현 전략이 확정되기 전에는 특정 Cascade 동작을 전제로 테스트를 작성하지 않는다.
+리뷰 삭제는 Service가 소속 Comment를 먼저 명시적으로 삭제한 뒤 Review를 삭제하며, PostgreSQL 통합 테스트에서 두 삭제가 같은 트랜잭션으로 완료되는지 검증한다.
 
 공통 PostgreSQL Container는 테스트 전용 `TestcontainersConfiguration`의 Bean으로 선언하고 Spring Boot `@ServiceConnection`으로 연결한다. Repository Test는 공통 `@PostgresRepositoryTest`를 사용한다. 이 Annotation은 `@DataJpaTest`, `AutoConfigureTestDatabase.Replace.NONE`, 공통 Container 설정 Import를 묶어 H2 등 Embedded DB가 Classpath에 추가되더라도 DataSource를 교체하지 못하게 한다. Member, Movie와 향후 Review, Comment Repository Test가 같은 규칙을 재사용한다. Spring이 Container 생명주기를 관리하며 각 Repository Test의 Transaction Rollback으로 테스트 데이터를 격리한다.
 
@@ -97,6 +97,7 @@ ArchUnit JUnit 5 지원을 테스트 의존성으로 사용해 패키지 간 의
 - Repository는 Controller에 의존하지 않는다.
 - Service는 Controller에 의존하지 않는다.
 - Domain 및 Entity 계층은 Controller에 의존하지 않는다.
+- Service와 Controller는 `TmdbMovieClient` 구현체에 직접 의존하지 않고 `MovieClient` 경계를 사용한다.
 
 Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 위치, Service별 테스트 존재 여부, LAZY Fetch 여부는 구현 구조가 생긴 뒤 검증 가능성을 다시 판단하며 현재 ArchUnit 규칙으로 강제하지 않는다.
 
@@ -132,10 +133,10 @@ Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 
 | 요구사항 ID | 테스트 계층 | 핵심 검증 시나리오 |
 | --- | --- | --- |
 | `REVIEW-001` | Service, Controller / Security | `MEMBER`는 리뷰를 작성하고 작성자로 기록된다. `ANONYMOUS`는 401, `SIGNUP_REQUIRED`는 403이다. |
-| `REVIEW-002` | Unit / Domain, Controller | `0.5~5.0`의 `0.5` 단위 값만 허용하고 내부 `1~10` 정수로 정확히 변환한다. 범위 밖 값과 잘못된 단위는 400이다. |
+| `REVIEW-002` | Unit / Domain, Controller, Integration | API·도메인·DB에서 `0.5~5.0`의 `0.5` 단위 값을 그대로 유지한다. 범위 밖 값과 잘못된 단위는 거부하고 PostgreSQL `numeric(2,1)` 저장을 검증한다. |
 | `REVIEW-003` | Service, Controller | 인증 없이 영화별 리뷰 목록을 조회하고 기본 `page=0`, `size=20`, `createdAt DESC`가 적용된다. |
 | `REVIEW-004` | Service, Controller | 인증 없이 존재하는 리뷰 상세를 조회하면 200, 존재하지 않으면 404다. |
-| `REVIEW-005` | Service, Controller / Security | 작성자는 제목·본문·평점을 수정할 수 있고 작성자·영화는 바꿀 수 없다. 다른 Member는 403이며 없는 Review는 404다. |
+| `REVIEW-005` | Service, Controller / Security | 작성자는 제목·본문·평점 중 전달한 필드만 수정하고 생략한 값은 유지한다. 빈 요청, 명시적 `null`, blank 제목·본문과 잘못된 평점은 400이다. 작성자·영화는 바꿀 수 없고 다른 Member는 403이며 없는 Review는 404다. |
 | `REVIEW-006` | Service, Controller / Security, Integration | 작성자만 삭제할 수 있고 성공 시 204다. 다른 Member는 403, 없는 Review는 404이며 삭제 Transaction의 원자성을 검증한다. |
 | `REVIEW-007` | Service, Controller, Integration | 같은 `Member + Movie`로 두 번째 리뷰를 만들면 409이며 DB UNIQUE 제약도 중복 저장을 거부한다. |
 | `REVIEW-008` | Unit / Domain, Service | 영화 평균 평점은 Review 데이터로 계산하고 Movie에 평균 평점이나 리뷰 개수 파생 값을 저장하지 않는다. |
@@ -180,8 +181,8 @@ Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 
 - `ANONYMOUS`는 리뷰 작성 시 401을 받는다.
 - `SIGNUP_REQUIRED`는 리뷰 작성 시 403을 받는다.
 - 한 Member는 같은 Movie에 리뷰를 두 번 작성할 수 없으며 두 번째 요청은 409다.
-- 사용자 평점은 `0.5~5.0` 범위의 `0.5` 단위만 허용하고 내부 값 `1~10`으로 변환한다.
-- 리뷰 작성자만 제목·본문·평점을 수정할 수 있고 작성자와 Movie는 변경할 수 없다.
+- 사용자 평점은 API·도메인·DB에서 `0.5~5.0` 범위의 `0.5` 단위 `BigDecimal`로 동일하게 유지한다.
+- 리뷰 작성자만 제목·본문·평점 중 하나 이상을 부분 수정할 수 있고 생략 값은 유지하며 작성자와 Movie는 변경할 수 없다. 빈 요청과 명시적 `null`은 거부한다.
 - 리뷰 작성자만 리뷰를 삭제할 수 있다.
 - 다른 Member의 수정·삭제 요청은 403이다.
 - 존재하지 않는 Review의 조회·수정·삭제는 404다.
@@ -197,7 +198,7 @@ Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 
 - Review 작성자라도 다른 Member의 Comment를 수정하거나 삭제할 수 없고 403을 받는다.
 - 존재하지 않는 Comment의 수정·삭제는 404다.
 - Comment 삭제는 Hard Delete이며 삭제 후 DB에 남지 않는다.
-- **Pending Test Scenario:** Review 삭제 시 소속 Comment도 함께 삭제되는지는 삭제 책임을 DB/JPA/Service 중 어디에 둘지 확정한 뒤 PostgreSQL Integration Test로 반드시 추가한다. 현재 Comment Entity/Repository 단계에서는 자동 Cascade를 전제하거나 성공 조건으로 강제하지 않는다.
+- Review 삭제 시 Service가 소속 Comment를 명시적으로 먼저 Hard Delete하며, PostgreSQL 통합 테스트로 Comment와 Review가 함께 제거되는지 검증한다.
 
 ## DB Constraint 테스트
 
@@ -228,7 +229,7 @@ Member의 두 UNIQUE 제약은 실제 PostgreSQL에서 중복 저장을 거부�
 
 Movie Repository Test도 같은 PostgreSQL 환경을 재사용한다. `tmdb_id` UNIQUE 위반과 nullable 규칙을 검증하고, `information_schema`를 조회해 `created_at`의 실제 타입이 `timestamptz`인지 확인한다.
 
-Review는 DB 없는 Domain Test에서 내부 평점 `1~10` 경계를 검증한다. Repository Test에서는 Member·Movie 관계, 조합 UNIQUE, 실제 PostgreSQL FK·nullable 및 `created_at`·`updated_at`의 `timestamptz` 타입을 검증한다.
+Review는 DB 없는 Domain Test에서 `0.5~5.0` 범위와 `0.5` 단위를 검증한다. Repository Test에서는 Member·Movie 관계, 조합 UNIQUE, 실제 PostgreSQL `rating numeric(2,1)`과 저장 왕복 값, FK·nullable 및 `created_at`·`updated_at`의 `timestamptz` 타입을 검증한다. Migration 도구가 없는 현재는 평점 CHECK 제약을 JPA에 비표준적으로 추가하지 않고 향후 Migration 도입 시 검토한다.
 
 ## 외부 TMDB API 테스트
 
@@ -239,6 +240,7 @@ Review는 DB 없는 Domain Test에서 내부 평점 `1~10` 경계를 검증한�
 - 추천 JSON을 `MovieSummary` 목록으로 매핑한다.
 - `Authorization: Bearer fake-test-token` Header를 검증한다.
 - 빈 `release_date`를 `null`로 매핑한다.
+- ISO `release_date`를 `LocalDate`로 매핑하고, 잘못된 형식은 `DateTimeParseException`을 직접 노출하지 않고 `MovieClientException`으로 변환한다.
 - 404를 영화 없음 오류로 변환한다.
 - 401/403을 TMDB 인증 오류로 변환한다.
 - 5xx를 TMDB 서비스 장애 오류로 변환한다.
@@ -311,7 +313,6 @@ Review는 DB 없는 Domain Test에서 내부 평점 `1~10` 경계를 검증한�
 - TMDB Fake Fixture의 형식, 위치, 유지 관리 방식
 - 테스트 데이터 Builder 또는 Factory 도입 여부와 범위
 - Controller Test와 Integration Test의 경계
-- Review 삭제 시 Comment 삭제 구현별 통합 테스트 구성
 - 실제 TMDB 계약 테스트의 필요성, 실행 주기, 격리 환경
 - Coverage 측정 도구와 최소 기준
 - CI 품질 기준, 병렬 실행, 테스트 결과 보고 방식
