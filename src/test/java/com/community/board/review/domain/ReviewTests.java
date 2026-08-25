@@ -5,6 +5,8 @@ import com.community.board.member.domain.OAuthProvider;
 import com.community.board.movie.domain.Movie;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -21,42 +23,85 @@ class ReviewTests {
 
     @Test
     void createsReview() {
-        Review review = Review.create(member, movie, "Great movie", "My review", 8);
+        Review review = Review.create(member, movie, "Great movie", "My review", rating("4.5"));
 
         assertThat(review.getMember()).isSameAs(member);
         assertThat(review.getMovie()).isSameAs(movie);
         assertThat(review.getTitle()).isEqualTo("Great movie");
         assertThat(review.getContent()).isEqualTo("My review");
-        assertThat(review.getRating()).isEqualTo(8);
+        assertThat(review.getRating()).isEqualByComparingTo("4.5");
         assertThat(review.getCreatedAt()).isNotNull();
         assertThat(review.getUpdatedAt()).isNull();
     }
 
     @Test
-    void acceptsMinimumRating() {
-        Review review = Review.create(member, movie, "Minimum", "Minimum rating", 1);
-
-        assertThat(review.getRating()).isEqualTo(1);
+    void acceptsHalfPointRating() {
+        assertThat(createWithRating("0.5").getRating()).isEqualByComparingTo("0.5");
     }
 
     @Test
-    void acceptsMaximumRating() {
-        Review review = Review.create(member, movie, "Maximum", "Maximum rating", 10);
+    void acceptsOnePointRating() {
+        assertThat(createWithRating("1.0").getRating()).isEqualByComparingTo("1.0");
+    }
 
-        assertThat(review.getRating()).isEqualTo(10);
+    @Test
+    void acceptsFourAndHalfPointRating() {
+        assertThat(createWithRating("4.5").getRating()).isEqualByComparingTo("4.5");
+    }
+
+    @Test
+    void acceptsFivePointRating() {
+        assertThat(createWithRating("5.0").getRating()).isEqualByComparingTo("5.0");
+    }
+
+    @Test
+    void rejectsZeroRating() {
+        assertInvalidRating("0.0");
     }
 
     @Test
     void rejectsRatingBelowMinimum() {
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> Review.create(member, movie, "Invalid", "Too low", 0))
-                .withMessage("rating must be between 1 and 10");
+        assertInvalidRating("0.4");
+    }
+
+    @Test
+    void rejectsRatingThatIsNotInHalfPointStepsNearMinimum() {
+        assertInvalidRating("0.6");
+    }
+
+    @Test
+    void rejectsRatingThatIsNotInHalfPointSteps() {
+        assertInvalidRating("4.6");
     }
 
     @Test
     void rejectsRatingAboveMaximum() {
+        assertInvalidRating("5.1");
+    }
+
+    @Test
+    void updatesEditableFieldsAndUpdatedAt() {
+        Review review = Review.create(member, movie, "Before", "Before content", rating("4.0"));
+
+        review.update("After", "After content", rating("4.5"));
+
+        assertThat(review.getTitle()).isEqualTo("After");
+        assertThat(review.getContent()).isEqualTo("After content");
+        assertThat(review.getRating()).isEqualByComparingTo("4.5");
+        assertThat(review.getUpdatedAt()).isNotNull();
+    }
+
+    private Review createWithRating(String rating) {
+        return Review.create(member, movie, "Title", "Content", rating(rating));
+    }
+
+    private void assertInvalidRating(String rating) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Review.create(member, movie, "Invalid", "Too high", 11))
-                .withMessage("rating must be between 1 and 10");
+                .isThrownBy(() -> createWithRating(rating))
+                .withMessage("평점은 0.5부터 5.0까지 0.5 단위여야 합니다.");
+    }
+
+    private BigDecimal rating(String value) {
+        return new BigDecimal(value);
     }
 }

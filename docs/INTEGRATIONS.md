@@ -35,6 +35,8 @@
 
 Retry, Circuit Breaker, Fallback은 적용하지 않는다.
 
+API 경계에서 영화 없음은 `404 Not Found`, TMDB 인증 실패와 그 밖의 Upstream 응답 실패는 `502 Bad Gateway`, TMDB 서비스 장애와 통신 실패는 `503 Service Unavailable`로 변환한다. 공급자 예외 메시지나 자격 증명 정보는 API 응답에 노출하지 않는다.
+
 ## 현재 범위 제외
 
 - 확정된 요구사항과 측정 없이 Cache, Retry, 대체 응답, 호출 제한 대응을 미리 구현하는 것
@@ -44,5 +46,4 @@ Retry, Circuit Breaker, Fallback은 적용하지 않는다.
 - TODO: TMDB 이용 약관, 호출 한도, 제공 데이터의 세부 범위를 확인한다.
 - TODO: 저장된 최소 영화 정보를 TMDB 변경에 맞춰 갱신할지 여부와 갱신 시점을 결정한다.
 - TODO: Retry, 대체 응답, 기능 축소, 호출 제한 대응 전략을 정의한다.
-- TODO: 공급자 또는 자격 증명 세부 정보를 노출하지 않는 API 오류 응답 방식을 정의한다.
 - TODO: 실제 TMDB 계약 Smoke Test의 실행 환경과 주기를 결정한다.

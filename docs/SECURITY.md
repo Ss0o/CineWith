@@ -159,6 +159,7 @@ OAuth2 인증만 완료한 가입 미완료 사용자를 `Member(status=PENDING)
 - `ANONYMOUS`의 가입 요청은 401, 이미 가입한 `MEMBER`의 재요청은 인증은 되어 있으나 가입 권한이 없으므로 403이다.
 - `GET /api/members/me`는 `ROLE_MEMBER` Principal의 내부 `memberId`로 현재 Member를 조회한다. 클라이언트가 조회 ID를 전달하지 않는다.
 - 인증·인가 오류와 OIDC 로그인 실패는 고정된 `code`, `message` JSON만 반환하며 내부 예외 메시지와 Stack Trace를 노출하지 않는다.
+- Review의 POST/PATCH/DELETE는 `ROLE_MEMBER`만 접근하며 Controller는 `CommunityOidcPrincipal.memberId`를 사용한다. 작성자 ID를 Request Body로 받지 않고 Service가 해당 ID로 Member를 다시 조회해 소유권을 검증한다.
 - OIDC 로그인 실패는 `401`과 `OAUTH_LOGIN_FAILED`를 반환한다.
 
 ## 현재 확정하지 않는 구현

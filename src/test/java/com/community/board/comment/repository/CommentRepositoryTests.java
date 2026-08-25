@@ -147,7 +147,13 @@ class CommentRepositoryTests {
 
     private Review saveReview(Member member, Long tmdbId) {
         Movie movie = movieRepository.saveAndFlush(Movie.create(tmdbId, "Movie " + tmdbId, null, null));
-        return reviewRepository.saveAndFlush(Review.create(member, movie, "Review", "Content", 8));
+        return reviewRepository.saveAndFlush(Review.create(
+                member,
+                movie,
+                "Review",
+                "Content",
+                new java.math.BigDecimal("4.0")
+        ));
     }
 
     private Map<String, ColumnMetadata> readCommentColumns() throws SQLException {

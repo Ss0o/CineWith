@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriBuilder;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 public class TmdbMovieClient implements MovieClient {
@@ -114,7 +115,15 @@ public class TmdbMovieClient implements MovieClient {
     }
 
     private LocalDate parseReleaseDate(String releaseDate) {
-        return hasText(releaseDate) ? LocalDate.parse(releaseDate) : null;
+        if (!hasText(releaseDate)) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(releaseDate);
+        } catch (DateTimeParseException exception) {
+            throw new MovieClientException("TMDB 응답의 개봉일을 처리할 수 없습니다.", exception);
+        }
     }
 
     private <T> T execute(ClientCall<T> call) {

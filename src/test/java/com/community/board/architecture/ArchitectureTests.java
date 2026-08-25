@@ -36,4 +36,12 @@ class ArchitectureTests {
             .should().dependOnClassesThat().resideInAPackage("..controller..")
             .because("domain and entity code must remain independent of the web layer")
             .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule servicesAndControllersMustNotDependOnTmdbImplementation = noClasses()
+            .that().resideInAnyPackage("..service..", "..controller..")
+            .should().dependOnClassesThat()
+            .haveFullyQualifiedName("com.community.board.integration.tmdb.TmdbMovieClient")
+            .because("services and controllers must depend on the MovieClient boundary, not its TMDB implementation")
+            .allowEmptyShould(true);
 }

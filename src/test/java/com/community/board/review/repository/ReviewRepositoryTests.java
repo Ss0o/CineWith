@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -47,7 +48,7 @@ class ReviewRepositoryTests {
         Movie movie = saveMovie(550L, "Fight Club");
 
         Review savedReview = reviewRepository.saveAndFlush(
-                Review.create(member, movie, "Great movie", "My review", 9)
+                Review.create(member, movie, "Great movie", "My review", new BigDecimal("4.5"))
         );
         Long reviewId = savedReview.getId();
         entityManager.clear();
@@ -58,7 +59,7 @@ class ReviewRepositoryTests {
         assertThat(foundReview.getMovie().getId()).isEqualTo(movie.getId());
         assertThat(foundReview.getTitle()).isEqualTo("Great movie");
         assertThat(foundReview.getContent()).isEqualTo("My review");
-        assertThat(foundReview.getRating()).isEqualTo(9);
+        assertThat(foundReview.getRating()).isEqualByComparingTo("4.5");
         assertThat(foundReview.getCreatedAt()).isNotNull();
         assertThat(foundReview.getUpdatedAt()).isNull();
     }
@@ -67,7 +68,7 @@ class ReviewRepositoryTests {
     void findsExistingReviewByMemberAndMovie() {
         Member member = saveMember("exists-sub", "existsReviewer");
         Movie movie = saveMovie(680L, "Pulp Fiction");
-        reviewRepository.saveAndFlush(Review.create(member, movie, "Title", "Content", 8));
+        reviewRepository.saveAndFlush(Review.create(member, movie, "Title", "Content", new BigDecimal("4.0")));
 
         assertThat(reviewRepository.existsByMemberAndMovie(member, movie)).isTrue();
     }
@@ -76,9 +77,9 @@ class ReviewRepositoryTests {
     void rejectsDuplicateMemberAndMovie() {
         Member member = saveMember("duplicate-review-sub", "duplicateReviewer");
         Movie movie = saveMovie(13L, "Forrest Gump");
-        reviewRepository.saveAndFlush(Review.create(member, movie, "First", "First review", 7));
+        reviewRepository.saveAndFlush(Review.create(member, movie, "First", "First review", new BigDecimal("3.5")));
 
-        Review duplicate = Review.create(member, movie, "Second", "Second review", 8);
+        Review duplicate = Review.create(member, movie, "Second", "Second review", new BigDecimal("4.0"));
 
         assertThatThrownBy(() -> reviewRepository.saveAndFlush(duplicate))
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -90,8 +91,8 @@ class ReviewRepositoryTests {
         Member secondMember = saveMember("second-member-sub", "secondReviewer");
         Movie movie = saveMovie(155L, "The Dark Knight");
 
-        reviewRepository.saveAndFlush(Review.create(firstMember, movie, "First", "First review", 10));
-        reviewRepository.saveAndFlush(Review.create(secondMember, movie, "Second", "Second review", 9));
+        reviewRepository.saveAndFlush(Review.create(firstMember, movie, "First", "First review", new BigDecimal("5.0")));
+        reviewRepository.saveAndFlush(Review.create(secondMember, movie, "Second", "Second review", new BigDecimal("4.5")));
 
         assertThat(reviewRepository.count()).isEqualTo(2);
     }
@@ -102,8 +103,8 @@ class ReviewRepositoryTests {
         Movie firstMovie = saveMovie(27205L, "Inception");
         Movie secondMovie = saveMovie(157336L, "Interstellar");
 
-        reviewRepository.saveAndFlush(Review.create(member, firstMovie, "First", "First review", 9));
-        reviewRepository.saveAndFlush(Review.create(member, secondMovie, "Second", "Second review", 10));
+        reviewRepository.saveAndFlush(Review.create(member, firstMovie, "First", "First review", new BigDecimal("4.5")));
+        reviewRepository.saveAndFlush(Review.create(member, secondMovie, "Second", "Second review", new BigDecimal("5.0")));
 
         assertThat(reviewRepository.count()).isEqualTo(2);
     }
@@ -117,7 +118,11 @@ class ReviewRepositoryTests {
         assertThat(columnsByName.get("title").isNullable()).isEqualTo("NO");
         assertThat(columnsByName.get("content").dataType()).isEqualTo("text");
         assertThat(columnsByName.get("content").isNullable()).isEqualTo("NO");
-        assertThat(columnsByName.get("rating").isNullable()).isEqualTo("NO");
+        ColumnMetadata rating = columnsByName.get("rating");
+        assertThat(rating.dataType()).isEqualTo("numeric");
+        assertThat(rating.numericPrecision()).isEqualTo(2);
+        assertThat(rating.numericScale()).isEqualTo(1);
+        assertThat(rating.isNullable()).isEqualTo("NO");
 
         ColumnMetadata createdAt = columnsByName.get("created_at");
         assertThat(createdAt.dataType()).isEqualTo("timestamp with time zone");
@@ -139,8 +144,12 @@ class ReviewRepositoryTests {
 
         System.out.printf(
                 "PostgreSQL review schema: member_id=NO/FK-member.id, movie_id=NO/FK-movie.id, "
-                        + "title=NO, content=text/NO, rating=NO, created_at=%s/%s/%s, "
+                        + "title=NO, content=text/NO, rating=%s(%s,%s)/%s, created_at=%s/%s/%s, "
                         + "updated_at=%s/%s/%s, member_movie_unique=true%n",
+                rating.dataType(),
+                rating.numericPrecision(),
+                rating.numericScale(),
+                rating.isNullable(),
                 createdAt.dataType(),
                 createdAt.udtName(),
                 createdAt.isNullable(),
@@ -164,7 +173,8 @@ class ReviewRepositoryTests {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement();
              ResultSet columns = statement.executeQuery("""
-                     select column_name, data_type, udt_name, is_nullable
+                     select column_name, data_type, udt_name, is_nullable,
+                            numeric_precision, numeric_scale
                      from information_schema.columns
                      where table_schema = current_schema()
                        and table_name = 'review'
@@ -175,7 +185,9 @@ class ReviewRepositoryTests {
                 ColumnMetadata metadata = new ColumnMetadata(
                         columns.getString("data_type"),
                         columns.getString("udt_name"),
-                        columns.getString("is_nullable")
+                        columns.getString("is_nullable"),
+                        columns.getObject("numeric_precision", Integer.class),
+                        columns.getObject("numeric_scale", Integer.class)
                 );
                 columnsByName.put(columns.getString("column_name"), metadata);
             }
@@ -236,7 +248,13 @@ class ReviewRepositoryTests {
         }
     }
 
-    private record ColumnMetadata(String dataType, String udtName, String isNullable) {
+    private record ColumnMetadata(
+            String dataType,
+            String udtName,
+            String isNullable,
+            Integer numericPrecision,
+            Integer numericScale
+    ) {
     }
 
     private record ForeignKeyMetadata(String referencedTable, String referencedColumn) {

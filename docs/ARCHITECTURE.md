@@ -23,8 +23,12 @@ PostgreSQL is the confirmed V1 database engine. The PostgreSQL JDBC Driver is th
 로컬 개발환경은 `compose.yaml`의 backend와 `postgres:17-alpine`을 사용한다. backend는 Compose Service 이름인 `postgres`로 DB에 연결하고 healthcheck 통과 후 시작한다. Migration 도구가 아직 없어 Compose에서만 임시로 Hibernate `update`를 사용하며 production 정책이 아니다. Repository Integration Test는 Compose DB가 아니라 기존 PostgreSQL Testcontainers를 계속 사용한다.
 
 TMDB 연동은 `MovieClient` Application 경계와 `TmdbMovieClient` Adapter로 분리한다. 외부 JSON DTO와 내부 조회 모델, 영속 Movie Entity는 서로 다른 모델이며 TMDB 조회만으로 Repository를 호출하지 않는다.
+Service와 Controller는 TMDB 구현체인 `TmdbMovieClient`에 직접 의존하지 않고 `MovieClient` 경계를 사용하며, 이 의존 방향은 Architecture Test로 검증한다.
 
 Member, Movie, and Review use `GenerationType.IDENTITY` for their internal `Long` primary keys. Movie keeps the external `tmdbId` as a separate UNIQUE business identifier, and Review enforces one row per Member and Movie. The migration strategy remains to be selected.
+Review rating은 API·도메인·PostgreSQL에서 같은 `BigDecimal` 값을 사용하며 `numeric(2,1)`로 저장한다. 범위와 `0.5` 단위는 Review 도메인이 보장하고, DB CHECK 제약은 Migration 도구 선정 시 검토한다.
+
+Review Application Use Case는 `ReviewService`의 트랜잭션 안에서 Member 확인, 필요 시 `MovieClient` 조회와 Movie 저장, 중복 확인, Review 저장을 수행한다. Review 저장이 실패하면 이 과정에서 생성한 Movie도 Rollback된다. Review 삭제는 양방향 컬렉션이나 Cascade를 추가하지 않고 `CommentRepository`로 소속 Comment를 먼저 명시적으로 삭제한 뒤 Review를 삭제한다.
 
 ## Architecture Decisions Required
 
