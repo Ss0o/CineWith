@@ -197,6 +197,9 @@ Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 
 - Comment 작성자만 자신의 Comment를 수정하거나 삭제할 수 있다.
 - Review 작성자라도 다른 Member의 Comment를 수정하거나 삭제할 수 없고 403을 받는다.
 - 존재하지 않는 Comment의 수정·삭제는 404다.
+- Comment content의 null·blank와 PATCH 빈 객체를 400으로 거부한다.
+- 목록은 인증 없이 기본 `page=0`, `size=20`, `createdAt ASC`로 조회하고 없는 Review는 404다.
+- Review와 Comment 목록은 `size=100`을 허용하고 `page < 0`, `size < 1`, `size > 100`은 공통 `INVALID_REQUEST` 오류 형식으로 반환한다.
 - Comment 삭제는 Hard Delete이며 삭제 후 DB에 남지 않는다.
 - Review 삭제 시 Service가 소속 Comment를 명시적으로 먼저 Hard Delete하며, PostgreSQL 통합 테스트로 Comment와 Review가 함께 제거되는지 검증한다.
 
@@ -230,6 +233,8 @@ Member의 두 UNIQUE 제약은 실제 PostgreSQL에서 중복 저장을 거부�
 Movie Repository Test도 같은 PostgreSQL 환경을 재사용한다. `tmdb_id` UNIQUE 위반과 nullable 규칙을 검증하고, `information_schema`를 조회해 `created_at`의 실제 타입이 `timestamptz`인지 확인한다.
 
 Review는 DB 없는 Domain Test에서 `0.5~5.0` 범위와 `0.5` 단위를 검증한다. Repository Test에서는 Member·Movie 관계, 조합 UNIQUE, 실제 PostgreSQL `rating numeric(2,1)`과 저장 왕복 값, FK·nullable 및 `created_at`·`updated_at`의 `timestamptz` 타입을 검증한다. Migration 도구가 없는 현재는 평점 CHECK 제약을 JPA에 비표준적으로 추가하지 않고 향후 Migration 도입 시 검토한다.
+
+Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 필수 컬럼 Schema, Hard Delete, content 수정 시 `updatedAt`, Review별 `createdAt ASC` Pagination query를 검증한다.
 
 ## 외부 TMDB API 테스트
 

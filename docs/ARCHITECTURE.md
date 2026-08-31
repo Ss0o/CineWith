@@ -6,7 +6,7 @@
 - Root package: `com.community.board`.
 - One application entry point: `CommunityServiceApplication`.
 - 설정은 Google OIDC 환경변수와 TMDB Client 환경변수를 사용하며 실제 Secret을 저장하지 않는다.
-- Member, Movie, Review, and Comment entities and repositories가 구현되어 있다. Google OIDC 로그인과 회원 기능, `MovieClient`/`TmdbMovieClient`가 구현되어 있으며 콘텐츠 Service/Controller와 Migration은 아직 없다.
+- Member, Movie, Review, Comment의 Entity, Repository, Application Service와 HTTP Controller가 구현되어 있다. Google OIDC 로그인과 회원 기능, `MovieClient`/`TmdbMovieClient`가 구현되어 있으며 Migration은 아직 없다.
 
 ## Available Technical Capabilities
 
@@ -29,6 +29,8 @@ Member, Movie, and Review use `GenerationType.IDENTITY` for their internal `Long
 Review rating은 API·도메인·PostgreSQL에서 같은 `BigDecimal` 값을 사용하며 `numeric(2,1)`로 저장한다. 범위와 `0.5` 단위는 Review 도메인이 보장하고, DB CHECK 제약은 Migration 도구 선정 시 검토한다.
 
 Review Application Use Case는 `ReviewService`의 트랜잭션 안에서 Member 확인, 필요 시 `MovieClient` 조회와 Movie 저장, 중복 확인, Review 저장을 수행한다. Review 저장이 실패하면 이 과정에서 생성한 Movie도 Rollback된다. Review 삭제는 양방향 컬렉션이나 Cascade를 추가하지 않고 `CommentRepository`로 소속 Comment를 먼저 명시적으로 삭제한 뒤 Review를 삭제한다.
+
+Comment Application Use Case는 `CommentService`가 현재 Principal의 `memberId`로 Member를 다시 조회하고 Review·Comment 존재 여부와 Comment 작성자 소유권을 검증한다. 변경 Use Case는 Transaction 안에서 처리하고 목록은 단순 derived query와 Offset Pagination을 사용한다. Member·Review 역방향 컬렉션, Cascade, Fetch Join과 EntityGraph는 추가하지 않는다.
 
 ## Architecture Decisions Required
 

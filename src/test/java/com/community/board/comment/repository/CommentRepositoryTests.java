@@ -12,6 +12,8 @@ import com.community.board.review.repository.ReviewRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -100,6 +102,38 @@ class CommentRepositoryTests {
         entityManager.clear();
 
         assertThat(commentRepository.findById(commentId)).isEmpty();
+    }
+
+    @Test
+    void updatesContentAndUpdatedAt() {
+        Member member = saveMember("update-comment-sub", "commentUpdater");
+        Review review = saveReview(member, 156L);
+        Comment comment = commentRepository.saveAndFlush(Comment.create(member, review, "Before"));
+
+        comment.update("After");
+        commentRepository.flush();
+        Long commentId = comment.getId();
+        entityManager.clear();
+
+        Comment found = commentRepository.findById(commentId).orElseThrow();
+        assertThat(found.getContent()).isEqualTo("After");
+        assertThat(found.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void pagesReviewCommentsByCreatedAtAscending() {
+        Member member = saveMember("page-comment-sub", "commentPager");
+        Review review = saveReview(member, 157L);
+        commentRepository.saveAndFlush(Comment.create(member, review, "First"));
+        commentRepository.saveAndFlush(Comment.create(member, review, "Second"));
+
+        var page = commentRepository.findByReviewId(
+                review.getId(),
+                PageRequest.of(0, 1, Sort.by(Sort.Direction.ASC, "createdAt"))
+        );
+
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getContent()).extracting(Comment::getContent).containsExactly("First");
     }
 
     @Test

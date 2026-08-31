@@ -128,7 +128,7 @@ Query Parameter:
 | 이름 | 기본값 | 설명 |
 | --- | --- | --- |
 | `page` | `0` | 0부터 시작하는 페이지 번호 |
-| `size` | `20` | 페이지당 리뷰 수 |
+| `size` | `20` | 페이지당 리뷰 수. 최대 `100` |
 
 - 기본 정렬: `createdAt DESC`
 - 접근 권한: Public
@@ -209,11 +209,19 @@ PATCH는 `title`, `content`, `rating` 중 전달된 필드만 변경하는 부�
 
 특정 리뷰의 댓글 목록을 조회한다.
 
+Query Parameter:
+
+| 이름 | 기본값 | 설명 |
+| --- | --- | --- |
+| `page` | `0` | 0부터 시작하는 페이지 번호 |
+| `size` | `20` | 페이지당 댓글 수. 최대 `100` |
+
 - 접근 권한: Public
 - 성공: `200 OK`
 - 대상 리뷰 없음: `404 Not Found`
+- 기본 정렬: `createdAt ASC`
 
-V1에서 댓글 목록의 Pagination 사용 여부는 아직 결정하지 않는다.
+목록 Response는 `content`, `page`, `size`, `totalElements`, `totalPages`를 반환한다. 존재하지 않는 리뷰를 빈 페이지로 표현하지 않는다.
 
 ### POST /api/reviews/{reviewId}/comments
 
@@ -226,6 +234,7 @@ Request DTO:
 | `content` | 예 | 댓글 내용 |
 
 Request Body에 `memberId`와 `reviewId`를 받지 않는다. 작성자는 Spring Security 인증 컨텍스트, 대상 리뷰는 URL의 `reviewId`를 사용한다.
+`content`는 `null` 또는 blank일 수 없으며 길이 제한은 아직 두지 않는다.
 
 - 성공: `201 Created`
 - 잘못된 Request: `400 Bad Request`
@@ -242,6 +251,8 @@ Request DTO:
 | 필드 | 필수 | 설명 |
 | --- | --- | --- |
 | `content` | 예 | 변경할 댓글 내용 |
+
+`content`는 PATCH에서도 반드시 전달해야 한다. 빈 객체, 명시적 `null`, 빈 문자열과 공백 문자열은 400이며 수정 성공 시 `updatedAt`을 갱신한다.
 
 - 성공: `200 OK`
 - 잘못된 Request: `400 Bad Request`
@@ -288,16 +299,22 @@ Validation 오류에는 필드 오류 정보를 추가할 수 있다. 필드 오
 
 ## Pagination
 
-- 리뷰 목록은 V1에서 Offset Pagination을 사용한다.
+- 리뷰와 댓글 목록은 V1에서 Offset Pagination을 사용한다.
 - 기본 페이지는 `page = 0`이다.
 - 기본 페이지 크기는 `size = 20`이다.
-- 기본 정렬은 `createdAt DESC`다.
+- 페이지 크기는 리뷰와 댓글 목록 모두 `1 <= size <= 100`이어야 한다.
+- 리뷰 기본 정렬은 `createdAt DESC`, 댓글 기본 정렬은 `createdAt ASC`다.
+- `page < 0`, `size < 1` 또는 `size > 100`은 `400 INVALID_REQUEST` 형식으로 반환한다.
 - Cursor Pagination은 V1에서 사용하지 않는다.
 - 실제 성능 측정으로 문제가 확인된 경우에만 다른 방식을 검토한다.
 
 ## Review Response
 
 Review 생성·상세·수정과 목록의 각 항목은 `reviewId`, `tmdbId`, `movieTitle`, `authorNickname`, `title`, `content`, `rating`, `createdAt`, `updatedAt`을 반환한다. `rating`은 사용자 표현인 `0.5`부터 `5.0`까지의 값이다. Entity와 Member 내부 ID는 반환하지 않는다.
+
+## Comment Response
+
+Comment 생성·수정과 목록의 각 항목은 `commentId`, `reviewId`, `authorNickname`, `content`, `createdAt`, `updatedAt`을 반환한다. `memberId`, OAuth provider 정보, Member·Review Entity 전체는 반환하지 않는다.
 
 ## ID 노출 정책
 
@@ -323,8 +340,6 @@ Member의 내부 DB ID는 일반 클라이언트 요청에서 직접 사용할 �
 
 - Member 가입 및 내 정보 Response의 정확한 필드
 - Movie 상세 Response에서 TMDB 필드를 어디까지 노출할지
-- Comment 목록과 개별 Comment Response의 정확한 필드
-- Comment Pagination 적용 여부
 - 닉네임, Review 제목·content, Comment content의 길이 제한
 - 배포 환경별 OAuth 성공 후 프론트엔드 Redirect URL의 실제 값
 - CSRF Token 전달 API와 SPA 교환 방식
