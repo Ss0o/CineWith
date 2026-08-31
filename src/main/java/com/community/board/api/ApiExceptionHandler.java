@@ -1,5 +1,8 @@
 package com.community.board.api;
 
+import com.community.board.comment.domain.InvalidCommentException;
+import com.community.board.comment.service.CommentNotFoundException;
+import com.community.board.comment.service.CommentOwnershipException;
 import com.community.board.member.service.DuplicateNicknameException;
 import com.community.board.member.service.MemberSignupConflictException;
 import com.community.board.member.service.MemberNotFoundException;
@@ -13,6 +16,7 @@ import com.community.board.review.domain.InvalidReviewRatingException;
 import com.community.board.review.domain.InvalidReviewUpdateException;
 import com.community.board.review.service.ReviewNotFoundException;
 import com.community.board.review.service.ReviewOwnershipException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -76,6 +80,26 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiErrorResponse> handleMethodValidation(ConstraintViolationException exception) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleCommentNotFound(CommentNotFoundException exception) {
+        return error(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", exception.getMessage());
+    }
+
+    @ExceptionHandler(CommentOwnershipException.class)
+    ResponseEntity<ApiErrorResponse> handleCommentOwnership(CommentOwnershipException exception) {
+        return error(HttpStatus.FORBIDDEN, "COMMENT_FORBIDDEN", exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCommentException.class)
+    ResponseEntity<ApiErrorResponse> handleInvalidComment(InvalidCommentException exception) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_COMMENT", exception.getMessage());
     }
 
     @ExceptionHandler({MovieClientUnavailableException.class, MovieClientCommunicationException.class})

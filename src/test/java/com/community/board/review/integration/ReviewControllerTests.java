@@ -260,6 +260,21 @@ class ReviewControllerTests {
     }
 
     @Test
+    void acceptsMaximumReviewPageSize() throws Exception {
+        mockMvc.perform(get("/api/movies/550/reviews?size=100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(100));
+    }
+
+    @Test
+    void rejectsReviewPageSizeAboveMaximum() throws Exception {
+        mockMvc.perform(get("/api/movies/550/reviews?size=101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
     void updatesOnlyRatingAndReturnsCompleteReview() throws Exception {
         Member author = saveMember("update-author", "updateAuthor");
         Review review = saveReview(author, 550L);

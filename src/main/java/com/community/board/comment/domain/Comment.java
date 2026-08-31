@@ -50,13 +50,25 @@ public class Comment {
     private Comment(Member member, Review review, String content, Instant createdAt) {
         this.member = Objects.requireNonNull(member, "member must not be null");
         this.review = Objects.requireNonNull(review, "review must not be null");
-        this.content = Objects.requireNonNull(content, "content must not be null");
+        this.content = validateContent(content);
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
         this.updatedAt = null;
     }
 
     public static Comment create(Member member, Review review, String content) {
         return new Comment(member, review, content, Instant.now());
+    }
+
+    public void update(String content) {
+        this.content = validateContent(content);
+        this.updatedAt = Instant.now();
+    }
+
+    private static String validateContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new InvalidCommentException();
+        }
+        return content;
     }
 
     public Long getId() {
