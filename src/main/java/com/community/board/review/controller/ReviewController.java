@@ -4,6 +4,7 @@ import com.community.board.review.service.ReviewService;
 import com.community.board.review.service.ReviewView;
 import com.community.board.security.CommunityOidcPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +58,7 @@ public class ReviewController {
     public ReviewPageResponse getByMovie(
             @PathVariable Long tmdbId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) int size
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         return ReviewPageResponse.from(reviewService.getByMovie(tmdbId, page, size));
     }

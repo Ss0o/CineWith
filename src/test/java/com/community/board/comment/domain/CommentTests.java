@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CommentTests {
 
@@ -49,5 +50,21 @@ class CommentTests {
         assertThatNullPointerException()
                 .isThrownBy(() -> Comment.create(member, null, "Comment content"))
                 .withMessage("review must not be null");
+    }
+
+    @Test
+    void rejectsBlankContent() {
+        assertThatThrownBy(() -> Comment.create(member, review, "  "))
+                .isInstanceOf(InvalidCommentException.class);
+    }
+
+    @Test
+    void updatesContentAndUpdatedAt() {
+        Comment comment = Comment.create(member, review, "Before");
+
+        comment.update("After");
+
+        assertThat(comment.getContent()).isEqualTo("After");
+        assertThat(comment.getUpdatedAt()).isNotNull();
     }
 }
