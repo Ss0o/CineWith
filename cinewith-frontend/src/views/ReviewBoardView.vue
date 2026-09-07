@@ -11,6 +11,7 @@ const query = ref('')
 const movies = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
+let loadVersion = 0
 
 async function search() {
   const normalizedQuery = query.value.trim()
@@ -25,17 +26,20 @@ async function clearSearch() {
 async function loadMovies(routeQuery) {
   const normalizedQuery = typeof routeQuery === 'string' ? routeQuery.trim() : ''
   query.value = normalizedQuery
+  const request = ++loadVersion
   loading.value = true
   errorMessage.value = ''
   try {
-    movies.value = normalizedQuery
+    const result = normalizedQuery
       ? await dataService.movies.search(normalizedQuery)
       : await dataService.movies.nowPlaying()
+    if (request === loadVersion) movies.value = result
   } catch (error) {
+    if (request !== loadVersion) return
     movies.value = []
     errorMessage.value = error.message
   } finally {
-    loading.value = false
+    if (request === loadVersion) loading.value = false
   }
 }
 
@@ -55,7 +59,7 @@ watch(() => route.query.q, loadMovies, { immediate: true })
         <button v-if="route.query.q" class="btn btn-secondary" :disabled="loading" @click="clearSearch">검색 초기화</button>
       </div>
       <div class="fade-rule" style="margin: 0 -26px"></div>
-      <div v-if="errorMessage" class="card" style="color: var(--color-danger, #d66)">{{ errorMessage }}</div>
+      <div v-if="errorMessage" class="card" style="color: var(--color-danger, #d66)">{{ errorMessage }} <button class="btn btn-secondary" @click="loadMovies(route.query.q)">다시 불러오기</button></div>
       <div v-else-if="loading" style="padding: 42px 0; text-align: center; color: color-mix(in srgb, var(--color-text) 48%, transparent)">영화를 불러오는 중입니다.</div>
       <div v-else-if="!movies.length" style="padding: 42px 0; text-align: center; color: color-mix(in srgb, var(--color-text) 48%, transparent)">{{ route.query.q ? '검색 결과가 없습니다.' : '현재 표시할 상영작이 없습니다.' }}</div>
       <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px">

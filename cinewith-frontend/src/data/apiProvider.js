@@ -1,15 +1,15 @@
-import { apiRequest, clearCsrfToken } from './apiClient'
+import { apiRequest, clearCsrfToken } from './apiClient.js'
 
 const initial = (nickname = '?') => nickname.charAt(0) || '?'
 const dateLabel = (value) => value ? new Date(value).toLocaleDateString('ko-KR') : ''
 
 function movieView(movie) {
   const year = movie.releaseDate ? Number(movie.releaseDate.slice(0, 4)) : null
-  return { id: movie.tmdbId, tmdbId: movie.tmdbId, title: movie.title, posterPath: movie.posterPath, releaseDate: movie.releaseDate, year, genre: '', genres: [], runtimeMinutes: 0, rating12: '', director: '', cast: [], synopsis: '', avgRating: 0, reviewCount: 0, ratingDistribution: [], boxOffice: { rank: 0, share: 0, admissions: 0 } }
+  return { id: movie.tmdbId, tmdbId: movie.tmdbId, title: movie.title, posterPath: movie.posterPath, releaseDate: movie.releaseDate, year }
 }
 
 function reviewView(review) {
-  return { id: review.reviewId, reviewId: review.reviewId, movieId: review.tmdbId, tmdbId: review.tmdbId, movieTitle: review.movieTitle, title: review.title, rating: Number(review.rating), author: { nickname: review.authorNickname, initial: initial(review.authorNickname) }, createdAtLabel: dateLabel(review.createdAt), createdAtDate: dateLabel(review.createdAt), updatedAt: review.updatedAt, viewCount: 0, likeCount: 0, commentCount: 0, scrapCount: 0, excerpt: review.content, body: [{ type: 'p', text: review.content }], tags: [], spoiler: false }
+  return { id: review.reviewId, reviewId: review.reviewId, movieId: review.tmdbId, tmdbId: review.tmdbId, movieTitle: review.movieTitle, title: review.title, rating: Number(review.rating), author: { nickname: review.authorNickname, initial: initial(review.authorNickname) }, createdAtLabel: dateLabel(review.createdAt), createdAtDate: dateLabel(review.createdAt), updatedAt: review.updatedAt, excerpt: review.content, body: [{ type: 'p', text: review.content }], tags: [], spoiler: false }
 }
 
 function commentView(comment) {
@@ -29,14 +29,14 @@ export const apiProvider = {
     async recommendations(id) { return (await apiRequest(`/api/movies/${id}/recommendations`)).map(movieView) },
   },
   reviews: {
-    async listByMovie(movieId, page = 0, size = 20) { return (await apiRequest(`/api/movies/${movieId}/reviews?page=${page}&size=${size}`)).content.map(reviewView) },
+    async listByMovie(movieId, page = 0, size = 20) { const result = await apiRequest(`/api/movies/${movieId}/reviews?page=${page}&size=${size}`); return { ...result, content: result.content.map(reviewView) } },
     async get(id) { return reviewView(await apiRequest(`/api/reviews/${id}`)) },
     async create(input) { return reviewView(await apiRequest('/api/reviews', { method: 'POST', body: JSON.stringify(input) })) },
     async update(id, input) { return reviewView(await apiRequest(`/api/reviews/${id}`, { method: 'PATCH', body: JSON.stringify(input) })) },
     async delete(id) { await apiRequest(`/api/reviews/${id}`, { method: 'DELETE' }) },
   },
   comments: {
-    async list(reviewId, page = 0, size = 20) { return (await apiRequest(`/api/reviews/${reviewId}/comments?page=${page}&size=${size}`)).content.map(commentView) },
+    async list(reviewId, page = 0, size = 20) { const result = await apiRequest(`/api/reviews/${reviewId}/comments?page=${page}&size=${size}`); return { ...result, content: result.content.map(commentView) } },
     async create(reviewId, content) { return commentView(await apiRequest(`/api/reviews/${reviewId}/comments`, { method: 'POST', body: JSON.stringify({ content }) })) },
     async update(id, content) { return commentView(await apiRequest(`/api/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ content }) })) },
     async delete(id) { await apiRequest(`/api/comments/${id}`, { method: 'DELETE' }) },
