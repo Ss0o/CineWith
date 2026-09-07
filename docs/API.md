@@ -21,6 +21,7 @@
 | `POST` | `/api/members/signup` | 닉네임 설정 및 회원가입 완료 | `SIGNUP_REQUIRED` | `201 Created` |
 | `GET` | `/api/members/me` | 현재 회원 정보 조회 | `MEMBER` | `200 OK` |
 | `POST` | `/api/logout` | 현재 서비스 Session 로그아웃 | 인증된 사용자 | `204 No Content` |
+| `GET` | `/api/movies/now-playing` | TMDB 현재 상영작 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/search?query={query}` | TMDB 영화 검색 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}` | TMDB 영화 상세 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/recommendations` | TMDB 추천 영화 조회 | Public | `200 OK` |
@@ -91,6 +92,13 @@ Google 계정 자체에서 로그아웃하거나 Google Token을 revoke하지 �
 
 Movie API는 우리 DB의 내부 `movie.id`가 아니라 TMDB의 `tmdbId`를 외부 식별자로 사용한다. 리뷰가 없는 영화는 서비스 DB에 존재하지 않을 수 있지만 검색·상세·추천 조회는 가능해야 하기 때문이다.
 
+### GET /api/movies/now-playing
+
+TMDB의 현재 상영작을 조회해 메인 화면에 제공한다. `TMDB_LANGUAGE`와 `TMDB_REGION` 설정을 적용하며, 조회 결과는 DB에 저장하지 않는다.
+
+- 접근 권한: Public
+- 성공: `200 OK`
+
 ### GET /api/movies/search?query={query}
 
 TMDB API를 사용해 `query`와 일치하는 영화를 검색한다.
@@ -115,7 +123,11 @@ TMDB API를 사용해 `query`와 일치하는 영화를 검색한다.
 - 성공: `200 OK`
 - 대상 영화 없음: `404 Not Found`
 
-Movie Response에서 노출할 정확한 TMDB 필드는 아직 결정하지 않는다.
+현재 Movie 현재 상영작·검색·상세·추천 Response는 `tmdbId`, `title`, `posterPath`, `releaseDate`를 반환한다. `posterPath`는 TMDB 이미지 파일 경로이며 완성된 이미지 URL이 아니다.
+
+### GET /api/csrf
+
+Session 기반 SPA가 상태 변경 요청에 사용할 CSRF 토큰을 반환한다. Response는 `headerName`, `parameterName`, `token`을 제공하며 Frontend는 `headerName`에 `token` 값을 담아 POST/PATCH/DELETE 요청을 전송한다.
 
 ## Review API
 
@@ -342,7 +354,6 @@ Member의 내부 DB ID는 일반 클라이언트 요청에서 직접 사용할 �
 - Movie 상세 Response에서 TMDB 필드를 어디까지 노출할지
 - 닉네임, Review 제목·content, Comment content의 길이 제한
 - 배포 환경별 OAuth 성공 후 프론트엔드 Redirect URL의 실제 값
-- CSRF Token 전달 API와 SPA 교환 방식
 - Error Code 명명 규칙과 Validation Field Error 구조
 - 날짜·시간 및 Enum의 외부 표현 방식
 - OpenAPI 생성·게시 정책과 API 호환성·폐기 정책

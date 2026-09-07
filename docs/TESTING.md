@@ -311,6 +311,8 @@ Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 �
 - `SIGNUP_REQUIRED`의 `/api/members/me`, Review 작성, Comment 작성 요청은 403이다.
 - 서비스 로그아웃은 현재 HTTP Session을 무효화하며 이후 Member API 요청은 401이다.
 - 로그아웃은 Google 계정 로그아웃이나 Token revoke를 호출하지 않는다.
+- `GET /api/csrf`는 SPA가 상태 변경 요청에 사용할 CSRF Header 이름과 Token을 반환한다.
+
 
 ## Open Questions
 

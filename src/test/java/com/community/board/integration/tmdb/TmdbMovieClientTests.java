@@ -108,6 +108,62 @@ class TmdbMovieClientTests {
     }
 
     @Test
+    void mapsNowPlayingResponseAndSendsBearerAuthorization() {
+        server.expect(requestTo("https://tmdb.test/3/movie/now_playing?language=ko-KR&region=KR"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer fake-test-token"))
+                .andRespond(withSuccess("""
+                        {
+                          "results": [
+                            {
+                              "id": 157336,
+                              "title": "Interstellar",
+                              "poster_path": "/interstellar.jpg",
+                              "release_date": "2014-11-05"
+                            }
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(movieClient.getNowPlaying()).containsExactly(new MovieSummary(
+                157336L,
+                "Interstellar",
+                "/interstellar.jpg",
+                LocalDate.of(2014, 11, 5)
+        ));
+        server.verify();
+    }
+
+    @Test
+    void mapsEmptyNowPlayingResults() {
+        server.expect(requestTo("https://tmdb.test/3/movie/now_playing?language=ko-KR&region=KR"))
+                .andRespond(withSuccess("{\"results\":[]}", MediaType.APPLICATION_JSON));
+
+        assertThat(movieClient.getNowPlaying()).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void convertsNowPlayingServerError() {
+        server.expect(requestTo("https://tmdb.test/3/movie/now_playing?language=ko-KR&region=KR"))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> movieClient.getNowPlaying())
+                .isInstanceOf(MovieClientUnavailableException.class);
+        server.verify();
+    }
+
+    @Test
+    void convertsNowPlayingAuthenticationFailure() {
+        server.expect(requestTo("https://tmdb.test/3/movie/now_playing?language=ko-KR&region=KR"))
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+
+        assertThatThrownBy(() -> movieClient.getNowPlaying())
+                .isInstanceOf(MovieClientAuthenticationException.class);
+        server.verify();
+    }
+
+    @Test
     void mapsRecommendationResponse() {
         server.expect(requestTo("https://tmdb.test/3/movie/550/recommendations?language=ko-KR"))
                 .andRespond(withSuccess("""

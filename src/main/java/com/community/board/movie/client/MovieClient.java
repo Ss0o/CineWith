@@ -9,6 +9,8 @@ public interface MovieClient {
 
     List<MovieSummary> searchMovies(String query);
 
+    List<MovieSummary> getNowPlaying();
+
     MovieDetail getMovie(long tmdbId);
 
     List<MovieSummary> getRecommendations(long tmdbId);

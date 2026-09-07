@@ -1,0 +1,68 @@
+/* App-level component classes lifted from the "Cineboard Mockups.dc.html"
+   canvas doc's own <style> block — the parts that are real UI (not the
+   dv-* canvas/gallery chrome used only inside Claude Design's viewer). */
+
+body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); }
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { color: var(--color-accent-400); }
+
+.fade-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent);
+}
+
+.side-item {
+  display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px;
+  border-radius: var(--radius-md); font: 400 13.5px/1 var(--font-body);
+  color: color-mix(in srgb, var(--color-text) 72%, transparent); cursor: pointer;
+  text-decoration: none;
+}
+.side-item:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.side-on {
+  color: var(--color-accent);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.poster {
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(135deg, var(--color-neutral-900) 0 6px, var(--color-surface) 6px 12px);
+  display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex: none;
+}
+.poster span { padding: 0 4px 5px; font: 400 8px/1 ui-monospace, monospace; color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+
+.rv { display: flex; gap: 14px; padding: 14px 0; }
+.stars { font: 400 12px/1 ui-monospace, monospace; color: var(--color-accent); }
+.meta {
+  display: flex; align-items: center; gap: 14px; font: 400 11.5px/1 var(--font-body);
+  color: color-mix(in srgb, var(--color-text) 48%, transparent);
+}
+.av {
+  border-radius: 50%; flex: none;
+  background: linear-gradient(140deg, var(--color-accent-700), var(--color-neutral-800));
+  display: flex; align-items: center; justify-content: center;
+  font: 500 11px/1 var(--font-heading); color: var(--color-accent-100);
+}
+.chip {
+  height: 28px; padding: 0 12px; display: flex; align-items: center;
+  border-radius: var(--radius-md); border: 1px solid var(--color-divider);
+  font: 400 12px/1 var(--font-body); color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  cursor: pointer; background: transparent;
+}
+.chip-on { color: var(--color-accent); border-color: var(--color-accent); }
+.h6 {
+  font: 500 11px/1 var(--font-heading); letter-spacing: .09em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+/* Layout helpers used across page shells */
+.app-shell { display: flex; min-height: 100vh; }
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+@media (max-width: 860px) {
+  .desktop-only { display: none !important; }
+}
+@media (min-width: 861px) {
+  .mobile-only { display: none !important; }
+}

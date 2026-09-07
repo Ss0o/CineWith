@@ -47,6 +47,20 @@ public class TmdbMovieClient implements MovieClient {
     }
 
     @Override
+    public List<MovieSummary> getNowPlaying() {
+        TmdbMovieResultsResponse response = execute(() -> restClient.get()
+                .uri(uriBuilder -> addLanguageAndRegion(uriBuilder.path("/3/movie/now_playing")).build())
+                .retrieve()
+                .onStatus(status -> status.value() == 401 || status.value() == 403,
+                        (request, result) -> { throw new MovieClientAuthenticationException(); })
+                .onStatus(HttpStatusCode::is5xxServerError,
+                        (request, result) -> { throw new MovieClientUnavailableException(); })
+                .requiredBody(TmdbMovieResultsResponse.class));
+
+        return response.results().stream().map(this::toSummary).toList();
+    }
+
+    @Override
     public MovieDetail getMovie(long tmdbId) {
         TmdbMovieResponse response = execute(() -> restClient.get()
                 .uri(uriBuilder -> addLanguage(uriBuilder.path("/3/movie/{movieId}"))
@@ -87,7 +101,11 @@ public class TmdbMovieClient implements MovieClient {
 
     private UriBuilder addSearchParameters(UriBuilder uriBuilder, String query) {
         UriBuilder result = uriBuilder.queryParam("query", query);
-        result = addLanguage(result);
+        return addLanguageAndRegion(result);
+    }
+
+    private UriBuilder addLanguageAndRegion(UriBuilder uriBuilder) {
+        UriBuilder result = addLanguage(uriBuilder);
         if (hasText(properties.region())) {
             result = result.queryParam("region", properties.region());
         }
