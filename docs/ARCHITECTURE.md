@@ -43,3 +43,7 @@ Comment Application Use Case는 `CommentService`가 현재 Principal의 `memberI
 - Configuration profile strategy
 - Logging, metrics, tracing, and deployment model
 - Whether Lombok remains part of the coding standard
+
+## 프론트엔드 페이지 상태 (1단계)
+
+`apiProvider`는 기존 HTTP 응답을 화면 모델로 변환하며 페이지 메타데이터를 유지한다. `usePagedList`는 Vue 반응성 상태로 로딩/오류/페이지와 오래된 비동기 응답을 관리한다. `PaginationControls`는 페이지 번호와 이동 이벤트만 담당한다. 영화/리뷰 상세의 부가 조회 상태는 핵심 콘텐츠와 분리한다. 백엔드 Controller/Service/Repository 및 DB 구조, 의존성은 변경하지 않는다.

@@ -1,117 +1,124 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
-import { useRouter } from 'vue-router'
+import { ref, watch, onBeforeUnmount } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import TopNav from '../components/layout/TopNav.vue'
 import PosterThumb from '../components/PosterThumb.vue'
-import AvatarBadge from '../components/AvatarBadge.vue'
 import StarRating from '../components/StarRating.vue'
+import PaginationControls from '../components/PaginationControls.vue'
+import { usePagedList } from '../composables/usePagedList'
 import { dataService } from '../data'
 
 const props = defineProps({ id: { type: String, required: true } })
 const router = useRouter()
-
 const movie = ref(null)
-const movieReviews = ref([])
-const recommendations = ref([])
-const loading = ref(true)
+const loading = ref(false)
 const errorMessage = ref('')
+const recommendations = ref([])
+const recommendationsLoading = ref(false)
+const recommendationsError = ref('')
 const activeTab = ref('reviews')
+const reviews = usePagedList((page, size) => dataService.reviews.listByMovie(props.id, page, size))
+let version = 0
 
-const distribution = computed(() => movie.value?.ratingDistribution ?? [])
-const maxBar = computed(() => Math.max(...distribution.value, 1))
-
-watch(() => props.id, async () => {
+async function loadMovie(id, request) {
   loading.value = true
   errorMessage.value = ''
-  try { [movie.value, movieReviews.value, recommendations.value] = await Promise.all([dataService.movies.get(props.id), dataService.reviews.listByMovie(props.id), dataService.movies.recommendations(props.id)]) }
-  catch (error) { errorMessage.value = error.message }
-  finally { loading.value = false }
+  try {
+    const result = await dataService.movies.get(id)
+    if (request === version) movie.value = result
+  } catch (error) {
+    if (request === version) errorMessage.value = error.message
+  } finally {
+    if (request === version) loading.value = false
+  }
+}
+async function loadRecommendations(id = props.id, request = version) {
+  recommendationsLoading.value = true
+  recommendationsError.value = ''
+  try {
+    const result = await dataService.movies.recommendations(id)
+    if (request === version) recommendations.value = result
+  } catch (error) {
+    if (request === version) recommendationsError.value = error.message
+  } finally {
+    if (request === version) recommendationsLoading.value = false
+  }
+}
+watch(() => props.id, (id) => {
+  const request = ++version
+  movie.value = null
+  recommendations.value = []
+  activeTab.value = 'reviews'
+  reviews.reset()
+  loadMovie(id, request)
+  reviews.load(0)
+  loadRecommendations(id, request)
 }, { immediate: true })
+onBeforeUnmount(() => { version++; reviews.reset() })
 </script>
 
 <template>
-  <div v-if="loading" style="padding: 60px; text-align: center">불러오는 중...</div>
-  <div v-else-if="!movie" style="padding: 60px; text-align: center; color: color-mix(in srgb, var(--color-text) 55%, transparent)">
-    {{ errorMessage || '존재하지 않는 영화입니다.' }}
-  </div>
-  <template v-else>
-    <TopNav />
-    <div style="padding: 16px 32px 0">
-      <button class="btn btn-ghost" type="button" @click="router.back()"><i class="ph ph-arrow-left"></i> 이전 화면</button>
+  <TopNav />
+  <main class="movie-detail">
+    <button class="btn btn-ghost" @click="router.back()">← 이전 화면</button>
+    <p v-if="loading" role="status">영화를 불러오는 중입니다.</p>
+    <div v-else-if="errorMessage" role="alert">
+      <p>{{ errorMessage }}</p>
+      <button class="btn btn-secondary" @click="loadMovie(props.id, version)">영화 다시 불러오기</button>
     </div>
-    <div style="padding: 26px 32px; display: flex; gap: 26px; background: linear-gradient(160deg, var(--color-surface), var(--color-bg) 70%)">
+    <section v-else-if="movie" class="movie-heading">
       <PosterThumb width="150px" height="216px" :label="movie.title" :poster-path="movie.posterPath" />
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 12px">
-        <div>
-          <div class="h6" style="margin-bottom: 8px">{{ movie.year }} · {{ movie.genre }} · {{ movie.runtimeMinutes }}분 · {{ movie.rating12 }}</div>
-          <h2 style="margin: 0 0 4px">{{ movie.title }}</h2>
-          <div v-if="movie.director" style="font: 400 13px/1 var(--font-body); color: color-mix(in srgb, var(--color-text) 50%, transparent)">
-            감독 {{ movie.director }}<template v-if="movie.cast.length"> · 출연 {{ movie.cast.join(', ') }}</template>
-          </div>
-        </div>
-        <div style="display: flex; align-items: flex-end; gap: 28px; padding: 6px 0">
-          <div>
-            <div style="font: 500 34px/1 var(--font-heading); color: var(--color-accent)">{{ movie.avgRating.toFixed(1) }}</div>
-            <div style="font: 400 11px/1.6 var(--font-body); color: color-mix(in srgb, var(--color-text) 45%, transparent)">리뷰 {{ movie.reviewCount }}개 평균</div>
-          </div>
-          <div v-if="distribution.length" style="display: flex; align-items: flex-end; gap: 5px; height: 52px">
-            <div
-              v-for="(value, i) in distribution"
-              :key="i"
-              :style="{
-                width: '14px',
-                height: Math.round((value / maxBar) * 100) + '%',
-                background: i === distribution.length - 1 ? 'var(--color-accent)' : i === distribution.length - 2 ? 'var(--color-accent-700)' : i >= distribution.length - 4 ? 'var(--color-neutral-700)' : 'var(--color-neutral-800)',
-                borderRadius: '2px 2px 0 0',
-              }"
-            ></div>
-          </div>
-          <div v-if="distribution.length" style="font: 400 11px/1.6 var(--font-body); color: color-mix(in srgb, var(--color-text) 45%, transparent)">1점 → 5점 분포</div>
-        </div>
-        <div v-if="movie.synopsis" style="font: 400 13.5px/1.8 var(--font-body); color: color-mix(in srgb, var(--color-text) 72%, transparent); max-width: 640px; text-wrap: pretty">
-          {{ movie.synopsis }}
-        </div>
-        <div style="display: flex; gap: 8px; margin-top: 2px">
-          <RouterLink class="btn btn-primary" :to="`/reviews/new?movieId=${movie.id}`"><i class="ph ph-pencil-simple" style="font-size: 15px"></i>이 영화 리뷰 쓰기</RouterLink>
-        </div>
+      <div>
+        <h2>{{ movie.title }}</h2>
+        <p class="meta">{{ movie.releaseDate || '개봉일 미정' }}</p>
+        <RouterLink class="btn btn-primary" :to="`/reviews/new?movieId=${movie.id}`">이 영화 리뷰 쓰기</RouterLink>
       </div>
+    </section>
+    <div class="seg" role="group" aria-label="영화 정보 선택">
+      <button class="btn" :aria-pressed="activeTab === 'reviews'" @click="activeTab = 'reviews'">{{ reviews.state.totalElements === null ? '리뷰' : `리뷰 ${reviews.state.totalElements}` }}</button>
+      <button class="btn" :aria-pressed="activeTab === 'similar'" @click="activeTab = 'similar'">비슷한 영화</button>
     </div>
-    <div class="fade-rule"></div>
-    <div style="display: flex; gap: 26px; padding: 22px 32px 32px">
-      <div style="flex: 1; min-width: 0">
-        <div class="seg" style="margin-bottom: 18px">
-          <label class="seg-opt"><input type="radio" name="mtab" value="reviews" v-model="activeTab" />리뷰 {{ movieReviews.length }}</label>
-          <label class="seg-opt"><input type="radio" name="mtab" value="oneline" v-model="activeTab" />한줄평</label>
-          <label class="seg-opt"><input type="radio" name="mtab" value="similar" v-model="activeTab" />비슷한 영화</label>
-        </div>
-        <div v-if="activeTab === 'reviews'" style="display: flex; flex-direction: column; gap: 2px">
-          <template v-for="(review, i) in movieReviews" :key="review.id">
-            <RouterLink :to="`/reviews/${review.id}`" style="padding: 14px 0; display: flex; flex-direction: column; gap: 7px; color: var(--color-text)">
-              <div style="display: flex; align-items: baseline; gap: 10px">
-                <span style="font: 500 15.5px/1.3 var(--font-heading)">{{ review.title }}</span>
-                <StarRating :rating="review.rating" size="12px" />
-              </div>
-              <div style="font: 400 13px/1.7 var(--font-body); color: color-mix(in srgb, var(--color-text) 66%, transparent)">{{ review.excerpt }}</div>
-              <div class="meta">
-                <AvatarBadge :initial="review.author.initial" size="18px" font-size="9px" />{{ review.author.nickname }}
-              </div>
-            </RouterLink>
-            <div class="fade-rule" v-if="i < movieReviews.length - 1"></div>
-          </template>
-          <div v-if="!movieReviews.length" style="padding: 24px 0; color: color-mix(in srgb, var(--color-text) 50%, transparent); font-size: 13px">
-            아직 작성된 리뷰가 없습니다.
-          </div>
-        </div>
-        <div v-else-if="activeTab === 'similar'" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px">
-          <RouterLink v-for="item in recommendations" :key="item.id" :to="`/movies/${item.id}`" class="card" style="color: var(--color-text)">
-            <PosterThumb width="100%" height="190px" :label="item.title" :poster-path="item.posterPath" />
-            <span>{{ item.title }}</span><span class="meta">{{ item.releaseDate || '개봉일 미정' }}</span>
-          </RouterLink>
-          <div v-if="!recommendations.length" class="meta">추천 영화가 없습니다.</div>
-        </div>
-        <div v-else style="padding: 24px 0; color: color-mix(in srgb, var(--color-text) 50%, transparent); font-size: 13px">한줄평 API는 현재 제공되지 않습니다.</div>
+    <section v-if="activeTab === 'reviews'" aria-label="영화 리뷰">
+      <p v-if="reviews.state.loading" role="status">리뷰를 불러오는 중입니다.</p>
+      <div v-else-if="reviews.state.error" role="alert">
+        <p>{{ reviews.state.error }}</p>
+        <button class="btn btn-secondary" @click="reviews.load()">리뷰 다시 불러오기</button>
       </div>
-    </div>
-  </template>
+      <template v-else>
+        <p v-if="!reviews.state.content.length" class="meta">아직 작성된 리뷰가 없습니다.</p>
+        <RouterLink v-for="review in reviews.state.content" :key="review.id" :to="`/reviews/${review.id}`" class="review-item">
+          <h4>{{ review.title }}</h4>
+          <StarRating :rating="review.rating" />
+          <p class="excerpt">{{ review.excerpt }}</p>
+          <div class="meta">{{ review.author.nickname }} · {{ review.createdAtLabel }}</div>
+        </RouterLink>
+      </template>
+      <PaginationControls :page="reviews.state.page" :total-pages="reviews.state.totalPages" :loading="reviews.state.loading" label="리뷰" @change="reviews.load" />
+    </section>
+    <section v-else aria-label="비슷한 영화">
+      <p v-if="recommendationsLoading" role="status">추천 영화를 불러오는 중입니다.</p>
+      <div v-else-if="recommendationsError" role="alert">
+        <p>{{ recommendationsError }}</p>
+        <button class="btn btn-secondary" @click="loadRecommendations()">추천 다시 불러오기</button>
+      </div>
+      <p v-else-if="!recommendations.length" class="meta">추천 영화가 없습니다.</p>
+      <div v-else class="movie-grid">
+        <RouterLink v-for="item in recommendations" :key="item.id" :to="`/movies/${item.id}`" class="card">
+          <PosterThumb width="100%" height="190px" :label="item.title" :poster-path="item.posterPath" />
+          <span>{{ item.title }}</span><span class="meta">{{ item.releaseDate || '개봉일 미정' }}</span>
+        </RouterLink>
+      </div>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.movie-detail { max-width: 1000px; margin: auto; padding: 24px; display: grid; gap: 24px; }
+.movie-heading { display: flex; align-items: center; gap: 24px; }
+.review-item { display: block; padding: 16px 0; border-bottom: 1px solid var(--color-divider); color: var(--color-text); }
+.review-item h4 { margin: 0 0 8px; }
+.excerpt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.seg button[aria-pressed="true"] { color: var(--color-accent); background: var(--color-surface); }
+.movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (max-width: 540px) { .movie-heading { align-items: flex-start; gap: 16px; } .movie-heading h2 { font-size: 24px; } }
+</style>

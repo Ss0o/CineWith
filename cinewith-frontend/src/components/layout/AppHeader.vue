@@ -87,7 +87,7 @@ function handleLogout() {
           <div>
             <div style="font: 400 13px/1.3 var(--font-body)">{{ state.member?.nickname ?? '가입 필요' }}</div>
             <div style="font: 400 10.5px/1.4 var(--font-body); color: color-mix(in srgb, var(--color-text) 42%, transparent)">
-              {{ state.member?.provider ?? 'Google' }} 연동 · 리뷰 {{ state.member?.reviewCount ?? 0 }}
+              {{ state.member?.provider ?? 'Google' }} 연동
             </div>
           </div>
         </div>

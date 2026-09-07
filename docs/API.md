@@ -357,3 +357,11 @@ Member의 내부 DB ID는 일반 클라이언트 요청에서 직접 사용할 �
 - Error Code 명명 규칙과 Validation Field Error 구조
 - 날짜·시간 및 Enum의 외부 표현 방식
 - OpenAPI 생성·게시 정책과 API 호환성·폐기 정책
+
+## 프론트엔드의 기존 API 사용 (1단계)
+
+HTTP 계약 변경은 없다. 프론트엔드 데이터 계층은 목록의 `content`만 추출하지 않고 `page`, `size`, `totalElements`, `totalPages`를 함께 보존한다. 화면 페이지 번호는 API의 0 기반 값에 1을 더해 표시한다. 전체 리뷰·댓글 수는 현재 페이지 길이가 아닌 `totalElements`를 사용한다.
+
+`GET /api/members/me`의 `nickname`과 리뷰·댓글의 `authorNickname`을 비교해 수정·삭제 버튼을 표시한다. 현재 닉네임은 UNIQUE이며 변경 API가 없다. 이 비교는 UX용이며 PATCH/DELETE 권한은 기존 Session Principal의 내부 회원 ID로 서버가 검사한다. 닉네임 변경 기능 도입 시 서버 계산 `editable` 등의 응답을 검토해야 한다.
+
+리뷰 수정 폼은 기존 `PATCH /api/reviews/{reviewId}`에 `{ "title": "수정 제목", "content": "수정 본문", "rating": 4.5 }`를 보낸다. 서버의 부분 수정 계약은 그대로 유지한다. API가 제공하지 않는 영화 통계 및 활동 수치는 프론트엔드가 임의로 생성하지 않는다.

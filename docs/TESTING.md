@@ -323,3 +323,9 @@ Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 �
 - 실제 TMDB 계약 테스트의 필요성, 실행 주기, 격리 환경
 - Coverage 측정 도구와 최소 기준
 - CI 품질 기준, 병렬 실행, 테스트 결과 보고 방식
+
+## 프론트엔드 화면 보완 테스트 (1단계)
+
+`cinewith-frontend/`에서 `npm test`와 `npm run build`를 실행한다. 새 의존성 없이 Node 내장 test runner와 기존 Vue의 반응성 API를 사용한다. `tests/ScreenBehaviorTests.js`는 작성자 표시 조건, 페이지 메타데이터 전달, 삭제 후 유효 페이지 보정, 빈 목록, 오류/재시도, 오래된 응답 무시, 미제공 영화 통계 제외, 평점 PATCH와 CSRF·Session 전달 및 401/403 전파를 검증한다. fetch를 대체하므로 Google/TMDB를 호출하지 않는다.
+
+이 테스트는 DOM 클릭 및 실제 OAuth 로그인 전체 흐름을 대체하지 않는다. 브라우저에서는 작성자/타인 버튼, 평점 수정 실패 후 입력 보존, 리뷰·댓글 페이지 이동, TMDB 추천 실패/재시도/빈 결과를 확인한다. 서버 회귀 검증은 기존 전체 JUnit/ArchUnit 테스트를 실행한다.

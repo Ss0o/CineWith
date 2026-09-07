@@ -20,7 +20,7 @@ const { state, logout } = useAuth()
         <div style="flex: 1">
           <div style="font: 400 13.5px/1.3 var(--font-body)">{{ state.member?.nickname }}</div>
           <div style="font: 400 10.5px/1.4 var(--font-body); color: color-mix(in srgb, var(--color-text) 42%, transparent)">
-            {{ state.member?.provider }} 연동 · 리뷰 {{ state.member?.reviewCount }}
+            {{ state.member?.provider }} 연동
           </div>
         </div>
       </div>

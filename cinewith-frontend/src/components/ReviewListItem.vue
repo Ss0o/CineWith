@@ -48,9 +48,6 @@ const revealed = ref(false)
           <AvatarBadge :initial="review.author.initial" size="18px" font-size="9px" />{{ review.author.nickname }}
         </span>
         <span>{{ review.createdAtLabel }}</span>
-        <span style="display: flex; align-items: center; gap: 5px"><i class="ph ph-heart" style="font-size: 13px"></i>{{ review.likeCount }}</span>
-        <span style="display: flex; align-items: center; gap: 5px"><i class="ph ph-chat-circle" style="font-size: 13px"></i>{{ review.commentCount }}</span>
-        <span v-if="review.scrapCount" style="display: flex; align-items: center; gap: 5px"><i class="ph ph-bookmark-simple" style="font-size: 13px"></i>{{ review.scrapCount }}</span>
       </div>
     </div>
   </div>
