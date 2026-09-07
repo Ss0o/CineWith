@@ -10,6 +10,10 @@
 
 ## Available Technical Capabilities
 
+`cinewith-frontend/`는 Vue 3와 Vue Router를 사용하는 독립 SPA다. Vue는 화면과 상태 관리를, Vue Router는 화면 이동을 담당하며 Vite와 Vue Plugin은 개발 서버 및 정적 번들 빌드를 제공한다. 프론트엔드 의존성은 npm lockfile로 관리하고 Gradle 의존성에는 추가하지 않는다. 검증은 해당 디렉터리의 `npm run build`로 수행하며 백엔드 테스트와 별도로 실행한다.
+
+개발 서버는 `/api`, `/oauth2`, `/login`을 로컬 백엔드에 프록시한다. 운영 정적 파일 제공과 reverse proxy 구성은 TODO이며 현재 Gradle 및 Docker 이미지 빌드에는 프론트엔드 번들을 포함하지 않는다.
+
 The build includes Spring Web MVC, Validation, Data JPA, Security, OAuth2 Client, PostgreSQL, Lombok, Springdoc OpenAPI, and Testcontainers support. H2 is no longer used.
 
 ## Initial Package Decision

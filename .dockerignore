@@ -4,3 +4,5 @@ build
 .env
 .idea
 *.iml
+cinewith-frontend/node_modules
+cinewith-frontend/dist

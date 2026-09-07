@@ -9,7 +9,7 @@
 
 ## TMDB Client 구현
 
-- Application 경계는 `MovieClient`이며 영화 검색, 상세, 추천 조회만 제공한다.
+- Application 경계는 `MovieClient`이며 현재 상영작, 영화 검색, 상세, 추천 조회만 제공한다.
 - 실제 구현은 Spring MVC와 같은 동기식 모델의 `RestClient`를 사용하는 `TmdbMovieClient`다. WebFlux 의존성은 추가하지 않는다.
 - TMDB API Read Access Token을 `Authorization: Bearer {token}` Header로 전송한다. API Key Query Parameter 방식은 사용하지 않는다.
 - Token은 `TMDB_ACCESS_TOKEN` 환경 변수에서만 주입한다.
@@ -17,10 +17,11 @@
 - `TMDB_LANGUAGE`와 `TMDB_REGION`은 값이 있을 때만 Query Parameter로 보낸다. V1의 언어·지역 기본 정책은 확정하지 않는다.
 - 연결 Timeout과 응답 Timeout은 각각 `TMDB_CONNECT_TIMEOUT`, `TMDB_READ_TIMEOUT`으로 관리하며 기본값은 `2s`, `5s`다.
 - TMDB DTO는 `integration.tmdb.dto` 안에 한정하고 Application에는 `MovieSummary`, `MovieDetail` 조회 모델만 반환한다.
-- 검색·상세·추천 호출은 Movie Entity나 Repository를 사용하지 않으며 DB에 저장하지 않는다.
+- 현재 상영작·검색·상세·추천 호출은 Movie Entity나 Repository를 사용하지 않으며 DB에 저장하지 않는다.
 
 ### V1 Endpoint
 
+- 현재 상영작: `GET /3/movie/now_playing`
 - 검색: `GET /3/search/movie`
 - 상세: `GET /3/movie/{movie_id}`
 - 추천: `GET /3/movie/{movie_id}/recommendations`

@@ -44,6 +44,15 @@ class AuthenticationIntegrationTests {
     private MemberRepository memberRepository;
 
     @Test
+    void exposesCsrfTokenForSpaRequests() throws Exception {
+        mockMvc.perform(get("/api/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.headerName").value("X-CSRF-TOKEN"))
+                .andExpect(jsonPath("$.parameterName").value("_csrf"))
+                .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
     void rejectsAnonymousMemberMeRequestWithUnauthorized() throws Exception {
         mockMvc.perform(get("/api/members/me"))
                 .andExpect(status().isUnauthorized())

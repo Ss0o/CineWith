@@ -137,8 +137,8 @@ OAuth2 인증만 완료한 가입 미완료 사용자를 `Member(status=PENDING)
 
 - V1은 Session과 Cookie 기반 인증을 사용하므로 Spring Security의 CSRF 보호를 유지한다.
 - 단순히 REST API라는 이유만으로 `csrf.disable()`을 사용하지 않는다.
-- 프론트엔드 SPA와 CSRF Token을 교환하는 구체적인 방법은 API 및 구현 설계 단계에서 결정한다.
-- CSRF Token 전달 Endpoint 유무와 URL은 아직 결정하지 않는다.
+- 프론트엔드 SPA는 CSRF Token을 Header로 전달한다.
+- `GET /api/csrf`가 현재 Session에 연결된 CSRF 토큰과 Header 이름을 SPA에 제공한다. SPA는 상태 변경 요청마다 해당 Header를 전송한다.
 
 ## 필수 보안 원칙
 
@@ -169,7 +169,6 @@ OAuth2 인증만 완료한 가입 미완료 사용자를 `Member(status=PENDING)
 
 - `AuthenticationEntryPoint`
 - `AccessDeniedHandler`
-- CSRF Token 전달 Endpoint
 - Session Cookie 세부 옵션
 
 ## Open Questions
@@ -177,7 +176,6 @@ OAuth2 인증만 완료한 가입 미완료 사용자를 `Member(status=PENDING)
 - Session Cookie의 이름, `HttpOnly`, `Secure`, `SameSite`, Domain, Path, 만료 설정
 - HTTP Session의 구체적인 만료 시간, 갱신, 동시 Session 정책
 - 배포 환경별 Frontend Redirect URL의 실제 값
-- SPA에 CSRF Token을 전달하고 갱신하는 방식
 - OAuth 실패 응답 이후 Frontend 화면 전환과 재시도 UX
 - 닉네임 형식 오류와 중복 발생 시 상태 코드 및 응답 형식
 - 가입 도중 Session이 만료되거나 가입을 재시도할 때의 사용자 경험
