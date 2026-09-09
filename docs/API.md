@@ -24,8 +24,10 @@
 | `GET` | `/api/movies/now-playing` | TMDB 현재 상영작 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/search?query={query}` | TMDB 영화 검색 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}` | TMDB 영화 상세 조회 | Public | `200 OK` |
+| `GET` | `/api/movies/{tmdbId}/rating-statistics` | Cinewith 리뷰 평점 통계 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/recommendations` | TMDB 추천 영화 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/reviews` | 특정 영화의 리뷰 목록 조회 | Public | `200 OK` |
+| `GET` | `/api/reviews` | 전체 리뷰 피드 및 검색 | Public | `200 OK` |
 | `GET` | `/api/reviews/{reviewId}` | 리뷰 상세 조회 | Public | `200 OK` |
 | `POST` | `/api/reviews` | 리뷰 작성 | `MEMBER` | `201 Created` |
 | `PATCH` | `/api/reviews/{reviewId}` | 리뷰 수정 | 작성자 `MEMBER` | `200 OK` |
@@ -365,3 +367,71 @@ HTTP 계약 변경은 없다. 프론트엔드 데이터 계층은 목록의 `con
 `GET /api/members/me`의 `nickname`과 리뷰·댓글의 `authorNickname`을 비교해 수정·삭제 버튼을 표시한다. 현재 닉네임은 UNIQUE이며 변경 API가 없다. 이 비교는 UX용이며 PATCH/DELETE 권한은 기존 Session Principal의 내부 회원 ID로 서버가 검사한다. 닉네임 변경 기능 도입 시 서버 계산 `editable` 등의 응답을 검토해야 한다.
 
 리뷰 수정 폼은 기존 `PATCH /api/reviews/{reviewId}`에 `{ "title": "수정 제목", "content": "수정 본문", "rating": 4.5 }`를 보낸다. 서버의 부분 수정 계약은 그대로 유지한다. API가 제공하지 않는 영화 통계 및 활동 수치는 프론트엔드가 임의로 생성하지 않는다.
+
+## Cinewith 평점 통계 (2단계 계약)
+
+`GET /api/movies/{tmdbId}/rating-statistics`는 TMDB 평점과 별개로 Cinewith Review만 집계한다. `tmdbId`는 기존 영화 API와 동일한 외부 식별자다. 양의 Long을 받으며 0/음수/잘못된 타입은 400 INVALID_REQUEST다.
+
+- Public, 성공 200. TMDB를 호출하지 않고 Movie도 생성하지 않는다.
+- 로컬 Movie가 없거나 리뷰가 0개이면 `averageRating: null`, `reviewCount: 0`, 10개 분포 모두 0이다. 이 응답은 TMDB 영화의 존재 여부를 보장하지 않는다. 기존 영화별 리뷰 목록의 빈 결과 정책과 일관성을 유지한다.
+- 평균은 소수 둘째 자리 HALF_UP 반올림, count는 long. 분포 키는 항상 `0.5`, `1.0`, …, `5.0`의 고정 소수 1자리 문자열이다.
+- 요약과 분포는 같은 읽기 스냅샷에서 집계한다. 이전에 커밋된 리뷰 생성/평점 수정/삭제는 다음 조회에 반영되며 별도 집계 저장이나 갱신은 없다.
+- UI는 Cinewith 평점이라고 명시하고 숫자는 소수 첫째 자리로 표시한다. 리뷰 없음은 0.0점으로 표현하지 않는다.
+
+
+정상 응답 예시(리뷰 평점 5.0, 5.0, 4.5, 4.0, 3.0):
+
+```json
+{
+  "averageRating": 4.30,
+  "reviewCount": 5,
+  "ratingDistribution": {
+    "0.5": 0, "1.0": 0, "1.5": 0, "2.0": 0, "2.5": 0,
+    "3.0": 1, "3.5": 0, "4.0": 1, "4.5": 1, "5.0": 2
+  }
+}
+```
+
+리뷰 없음 응답:
+
+```json
+{
+  "averageRating": null,
+  "reviewCount": 0,
+  "ratingDistribution": {
+    "0.5": 0, "1.0": 0, "1.5": 0, "2.0": 0, "2.5": 0,
+    "3.0": 0, "3.5": 0, "4.0": 0, "4.5": 0, "5.0": 0
+  }
+}
+```
+
+경로/쿼리 인자의 타입 변환 실패도 공통 `400 {"code":"INVALID_REQUEST","message":"요청 값이 올바르지 않습니다."}`로 반환한다. 예: `/api/movies/invalid/rating-statistics`. 기존 API에도 동일한 타입 불일치 처리 규칙이 적용된다.
+
+## 전체 리뷰 피드와 검색 (3단계 계약)
+
+`GET /api/reviews?page=0&size=20&query={query}`는 인증 없이 전체 리뷰를 최신순으로 반환한다. `query`는 선택값이며 리뷰 제목, 본문, 영화 제목 중 하나에 대소문자 무시 부분 일치하면 포함한다.
+
+- 기본은 `page=0`, `size=20`; `page < 0`, `size < 1`, `size > 100`은 `400 INVALID_REQUEST`다.
+- `query`는 앞뒤 공백을 제거한다. 빈 값/공백만 전달하면 검색 없이 전체 피드와 같다. 최대 100자이며 초과하면 `400 INVALID_REQUEST`다.
+- 순서는 `createdAt DESC, reviewId DESC`다. `reviewId`는 동시간 리뷰의 안정적인 보조 정렬 기준이다.
+- `contentPreview`는 최대 200자이며 원문 전체는 `GET /api/reviews/{reviewId}`에서 조회한다. `posterPath`는 리뷰 생성 시 저장된 Movie 최소 정보다. 피드 조회는 TMDB를 호출하지 않는다.
+
+```json
+{
+  "content": [{
+    "reviewId": 101,
+    "tmdbId": 157336,
+    "movieTitle": "Interstellar",
+    "posterPath": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+    "authorNickname": "user1",
+    "rating": 4.5,
+    "title": "다시 봐도 좋은 영화",
+    "contentPreview": "시간과 가족이라는 주제를...",
+    "createdAt": "2026-09-09T10:00:00Z"
+  }],
+  "page": 0,
+  "size": 20,
+  "totalElements": 153,
+  "totalPages": 8
+}
+```

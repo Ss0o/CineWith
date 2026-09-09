@@ -47,3 +47,21 @@ Comment Application Use Case는 `CommentService`가 현재 Principal의 `memberI
 ## 프론트엔드 페이지 상태 (1단계)
 
 `apiProvider`는 기존 HTTP 응답을 화면 모델로 변환하며 페이지 메타데이터를 유지한다. `usePagedList`는 Vue 반응성 상태로 로딩/오류/페이지와 오래된 비동기 응답을 관리한다. `PaginationControls`는 페이지 번호와 이동 이벤트만 담당한다. 영화/리뷰 상세의 부가 조회 상태는 핵심 콘텐츠와 분리한다. 백엔드 Controller/Service/Repository 및 DB 구조, 의존성은 변경하지 않는다.
+
+## 영화별 리뷰 평점 집계 (2단계)
+
+집계 원천이 Review이므로 `review.controller.RatingStatisticsController`와 `review.service.RatingStatisticsService`를 둔다. 기존 Review CRUD Service와 분리해 조회 책임을 명확히 한다. URL은 기존 영화별 리뷰 목록과 같이 외부 `tmdbId`를 사용한다.
+
+`ReviewRepository`의 JPQL AVG/COUNT 요약과 GROUP BY/COUNT 분포 쿼리 2개를 사용한다. 집계 projection은 `RatingSummary`, `RatingCount`이며 Review Entity를 로드하지 않는다. Service의 View와 Controller의 Response DTO를 구분한다. JPQL AVG 결과는 Double이므로 API의 BigDecimal로 변환 후 소수 둘째 자리 HALF_UP 반올림한다.
+
+이 Service 조회에만 `@Transactional(readOnly = true, isolation = REPEATABLE_READ)`를 적용해 두 쿼리가 PostgreSQL에서 동일 스냅샷을 읽게 한다. 기존 변경 트랜잭션 정책과 전역 isolation은 바꾸지 않는다. 현재 Controller가 트랜잭션 없이 Service를 호출하므로 이 경계에서 새 트랜잭션이 시작된다. 향후 다른 트랜잭션에서 재사용할 때는 REQUIRED 전파가 기존 isolation을 상속한다는 점을 검토해야 한다.
+
+TMDB 상세 API에 합치지 않고 별도 통계 API로 제공하여 외부 장애와 집계를 분리한다. Vue `MovieRatingStatistics`가 통계 조회와 그래프를 담당하며 영화 상세에 포함된다. 통계 실패가 영화/리뷰 목록을 가리지 않고 다른 영화로 이동할 때 오래된 응답을 무시한다. 캐시·통계 저장·새 인덱스·의존성은 추가하지 않는다.
+
+## 전체 리뷰 피드와 검색 (3단계)
+
+`GET /api/reviews`는 Review의 전체 피드 전용 조회다. `ReviewRepository`가 JPQL constructor expression으로 `ReviewFeedItem`만 선택하고, `ReviewService.getFeed`가 `Page<ReviewFeedItem>`을 Service/View 및 Controller Response로 변환한다. Controller는 Repository projection에 직접 의존하지 않는다.
+
+Review의 `member`, `movie`는 LAZY이므로 Entity `ReviewView.from`으로 목록을 변환하면 Member/Movie별 추가 조회(N+1)가 발생할 수 있다. 전체 피드는 필요한 scalar 컬럼을 content query의 일반 JOIN으로 함께 선택해 이를 피한다. ToMany 연관관계가 없으므로 Fetch Join은 가능할 수 있지만, 페이징 목록에 맞춘 DTO projection이 필요한 데이터와 SQL 형태를 가장 명확히 제한한다.
+
+검색어가 없을 때와 있을 때는 각각 별도 JPQL을 사용한다. null 파라미터와 `lower`를 한 SQL에 혼합해 PostgreSQL의 타입 추론에 의존하지 않는다. 검색은 Service에서 trim하며 빈 값은 일반 피드로, 그 외에는 bound parameter로 `title`, `content`, `movie.title`의 lower/LIKE 조건을 실행한다. 기본 정렬은 `createdAt DESC, id DESC`이고 PageRequest는 offset/limit만 적용한다. Vue `ReviewFeedView`는 URL query `q`를 검색 상태로 사용하므로 페이지 이동에는 검색어가 유지되고 `usePagedList`의 request version이 이전 응답을 무시한다.

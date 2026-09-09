@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import PosterThumb from './PosterThumb.vue'
 import AvatarBadge from './AvatarBadge.vue'
 import StarRating from './StarRating.vue'
@@ -10,22 +10,27 @@ const props = defineProps({
 })
 
 const revealed = ref(false)
+const router = useRouter()
+
+function openReview() {
+  router.push(`/reviews/${props.review.id}`)
+}
 </script>
 
 <template>
-  <div class="rv">
-    <PosterThumb width="62px" height="90px" label="포스터" />
+  <article class="rv review-card" role="link" tabindex="0" @click="openReview" @keydown.enter="openReview">
+    <PosterThumb width="62px" height="90px" :label="review.movieTitle" :poster-path="review.posterPath" />
     <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px">
       <div style="display: flex; align-items: center; gap: 8px">
-        <RouterLink :to="`/movies/${review.movieId}`" style="font: 400 12px/1 var(--font-body); color: color-mix(in srgb, var(--color-text) 55%, transparent)">
+        <RouterLink :to="`/movies/${review.movieId}`" style="font: 400 12px/1 var(--font-body); color: color-mix(in srgb, var(--color-text) 55%, transparent)" @click.stop>
           {{ review.movieTitle || `영화 #${review.movieId}` }}
         </RouterLink>
         <span v-if="review.spoiler" class="tag tag-outline">스포일러</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 10px">
-        <RouterLink :to="`/reviews/${review.id}`" style="font: 500 17px/1.3 var(--font-heading); color: var(--color-text)">
+        <strong style="font: 500 17px/1.3 var(--font-heading); color: var(--color-text)">
           {{ review.title }}
-        </RouterLink>
+        </strong>
         <StarRating :rating="review.rating" size="12px" />
       </div>
 
@@ -50,5 +55,10 @@ const revealed = ref(false)
         <span>{{ review.createdAtLabel }}</span>
       </div>
     </div>
-  </div>
+  </article>
 </template>
+
+<style scoped>
+.review-card { cursor: pointer; border-radius: var(--radius-md); }
+.review-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+</style>

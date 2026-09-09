@@ -15,7 +15,7 @@ const { state, openLoginModal } = useAuth()
     <RouterLink to="/" class="nav-brand" style="display: flex; align-items: center; gap: 8px; font-size: 16px; margin-right: 0">
       <i class="ph-fill ph-film-reel" style="font-size: 20px; color: var(--color-accent)"></i>씨네위드
     </RouterLink>
-    <RouterLink v-if="showBoardLink" to="/" style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 60%, transparent)">
+    <RouterLink v-if="showBoardLink" to="/reviews" style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 60%, transparent)">
       리뷰 게시판
     </RouterLink>
     <div style="flex: 1"></div>

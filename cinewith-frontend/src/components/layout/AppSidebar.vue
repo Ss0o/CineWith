@@ -21,6 +21,9 @@ function isActive(path) {
       <RouterLink to="/" class="side-item" :class="{ 'side-on': isActive('/') }">
         <i class="ph ph-magnifying-glass" style="font-size: 16px"></i>영화·리뷰 탐색
       </RouterLink>
+      <RouterLink to="/reviews" class="side-item" :class="{ 'side-on': isActive('/reviews') }">
+        <i class="ph ph-list-bullets" style="font-size: 16px"></i>전체 리뷰
+      </RouterLink>
       <RouterLink v-if="state.status === AUTH_STATE.MEMBER" to="/reviews/new" class="side-item" :class="{ 'side-on': isActive('/reviews/new') }">
         <i class="ph ph-note-pencil" style="font-size: 16px"></i>리뷰 작성
       </RouterLink>

@@ -5,6 +5,7 @@ import TopNav from '../components/layout/TopNav.vue'
 import PosterThumb from '../components/PosterThumb.vue'
 import StarRating from '../components/StarRating.vue'
 import PaginationControls from '../components/PaginationControls.vue'
+import MovieRatingStatistics from '../components/MovieRatingStatistics.vue'
 import { usePagedList } from '../composables/usePagedList'
 import { dataService } from '../data'
 
@@ -74,6 +75,7 @@ onBeforeUnmount(() => { version++; reviews.reset() })
         <RouterLink class="btn btn-primary" :to="`/reviews/new?movieId=${movie.id}`">이 영화 리뷰 쓰기</RouterLink>
       </div>
     </section>
+    <MovieRatingStatistics :tmdb-id="props.id" />
     <div class="seg" role="group" aria-label="영화 정보 선택">
       <button class="btn" :aria-pressed="activeTab === 'reviews'" @click="activeTab = 'reviews'">{{ reviews.state.totalElements === null ? '리뷰' : `리뷰 ${reviews.state.totalElements}` }}</button>
       <button class="btn" :aria-pressed="activeTab === 'similar'" @click="activeTab = 'similar'">비슷한 영화</button>

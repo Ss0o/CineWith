@@ -9,7 +9,8 @@ function movieView(movie) {
 }
 
 function reviewView(review) {
-  return { id: review.reviewId, reviewId: review.reviewId, movieId: review.tmdbId, tmdbId: review.tmdbId, movieTitle: review.movieTitle, title: review.title, rating: Number(review.rating), author: { nickname: review.authorNickname, initial: initial(review.authorNickname) }, createdAtLabel: dateLabel(review.createdAt), createdAtDate: dateLabel(review.createdAt), updatedAt: review.updatedAt, excerpt: review.content, body: [{ type: 'p', text: review.content }], tags: [], spoiler: false }
+  const content = review.contentPreview ?? review.content
+  return { id: review.reviewId, reviewId: review.reviewId, movieId: review.tmdbId, tmdbId: review.tmdbId, movieTitle: review.movieTitle, posterPath: review.posterPath, title: review.title, rating: Number(review.rating), author: { nickname: review.authorNickname, initial: initial(review.authorNickname) }, createdAtLabel: dateLabel(review.createdAt), createdAtDate: dateLabel(review.createdAt), updatedAt: review.updatedAt, excerpt: content, body: [{ type: 'p', text: review.content ?? content }], tags: [], spoiler: false }
 }
 
 function commentView(comment) {
@@ -23,12 +24,19 @@ export const apiProvider = {
     async logout() { await apiRequest('/api/logout', { method: 'POST' }); clearCsrfToken() },
   },
   movies: {
+    async ratingStatistics(id) { return apiRequest(`/api/movies/${id}/rating-statistics`) },
     async nowPlaying() { return (await apiRequest('/api/movies/now-playing')).map(movieView) },
     async search(query) { return (await apiRequest(`/api/movies/search?query=${encodeURIComponent(query)}`)).map(movieView) },
     async get(id) { return movieView(await apiRequest(`/api/movies/${id}`)) },
     async recommendations(id) { return (await apiRequest(`/api/movies/${id}/recommendations`)).map(movieView) },
   },
   reviews: {
+    async listFeed(query, page = 0, size = 20) {
+      const params = new URLSearchParams({ page, size })
+      if (query) params.set('query', query)
+      const result = await apiRequest(`/api/reviews?${params}`)
+      return { ...result, content: result.content.map(reviewView) }
+    },
     async listByMovie(movieId, page = 0, size = 20) { const result = await apiRequest(`/api/movies/${movieId}/reviews?page=${page}&size=${size}`); return { ...result, content: result.content.map(reviewView) } },
     async get(id) { return reviewView(await apiRequest(`/api/reviews/${id}`)) },
     async create(input) { return reviewView(await apiRequest('/api/reviews', { method: 'POST', body: JSON.stringify(input) })) },
