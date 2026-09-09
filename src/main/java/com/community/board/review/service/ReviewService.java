@@ -89,6 +89,15 @@ public class ReviewService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public ReviewFeedPage getFeed(String query, int page, int size) {
+        String normalizedQuery = normalizeQuery(query);
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return ReviewFeedPage.from(normalizedQuery == null
+                ? reviewRepository.findFeed(pageRequest)
+                : reviewRepository.searchFeed(normalizedQuery, pageRequest));
+    }
+
     @Transactional
     public ReviewView update(
             Long memberId,
@@ -147,5 +156,13 @@ public class ReviewService {
                 || command.ratingPresent() && command.rating() == null) {
             throw new InvalidReviewUpdateException();
         }
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null) {
+            return null;
+        }
+        String normalized = query.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

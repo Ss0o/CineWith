@@ -192,3 +192,11 @@ TODO: 의존성 검사, 정적 분석, 보안 테스트, 사고 대응 기준을
 ## 작성자 버튼 표시 (1단계)
 
 프론트엔드는 `MEMBER` 상태와 고유 닉네임 일치 여부로 리뷰·댓글 수정/삭제 버튼을 표시한다. 닉네임은 표시 조건에만 사용하며 서버에 인가 근거로 보내지 않는다. Service의 현재 회원 ID와 리소스 작성자 ID 비교 및 CSRF 검사는 변경하지 않는다. 오래된 화면 또는 세션 만료로 서버가 401/403을 반환하면 작업 성공으로 처리하지 않고 오류를 표시하며 수정 입력을 유지한다.
+
+## 평점 통계 조회 (2단계)
+
+`GET /api/movies/{tmdbId}/rating-statistics`는 기존 영화 GET Public 정책을 따른다. 회원 개인정보나 Entity를 반환하지 않고 평균·개수·평점 분포만 제공한다. 새 쓰기 경로는 없으며 Review CRUD의 Session, 소유권 검사, CSRF 보호는 유지한다.
+
+## 전체 리뷰 피드와 검색 (3단계)
+
+`GET /api/reviews`와 선택 `query`는 기존 Review 상세 및 영화별 리뷰 목록과 같이 Public이다. 응답은 작성자 닉네임과 리뷰·Movie의 공개 카드 정보만 반환하며, 이메일·provider ID·내부 Member ID는 노출하지 않는다. 검색어는 JPQL parameter binding으로 전달하며, 조회 기능 추가가 Review POST/PATCH/DELETE의 `ROLE_MEMBER`, 소유권 검사, CSRF 정책을 변경하지 않는다.

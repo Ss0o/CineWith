@@ -6,6 +6,7 @@ import com.community.board.security.CommunityOidcPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,6 +53,15 @@ public class ReviewController {
     @GetMapping("/reviews/{reviewId}")
     public ReviewResponse get(@PathVariable Long reviewId) {
         return ReviewResponse.from(reviewService.get(reviewId));
+    }
+
+    @GetMapping("/reviews")
+    public ReviewFeedPageResponse getFeed(
+            @RequestParam(required = false) @Size(max = 100) String query,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return ReviewFeedPageResponse.from(reviewService.getFeed(query, page, size));
     }
 
     @GetMapping("/movies/{tmdbId}/reviews")

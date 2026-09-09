@@ -95,6 +95,36 @@ test('preserves review and comment pagination metadata across API mapping', asyn
   assert.equal(reviews.content[0].likeCount, undefined)
 })
 
+test('loads the review feed with its search query and preserves card fields', async () => {
+  const urls = []
+  globalThis.fetch = async (url) => {
+    urls.push(url)
+    return json({ ...page(1), content: [{
+      reviewId: 9, tmdbId: 550, movieTitle: 'Interstellar', posterPath: '/poster.jpg',
+      authorNickname: 'author', rating: 4.5, title: 'Title', contentPreview: 'Preview', createdAt: '2026-09-09T00:00:00Z',
+    }] })
+  }
+  const feed = await apiProvider.reviews.listFeed('space journey', 1)
+  assert.deepEqual(urls, ['/api/reviews?page=1&size=20&query=space+journey'])
+  assert.equal(feed.content[0].posterPath, '/poster.jpg')
+  assert.equal(feed.content[0].excerpt, 'Preview')
+  assert.equal(feed.content[0].body[0].text, 'Preview')
+})
+
+test('resets the feed to page zero when a new search starts and ignores its old response', async () => {
+  const old = deferred()
+  let query = 'old'
+  const list = usePagedList((number) => query === 'old' ? old.promise : Promise.resolve(page(number, 1)))
+  const pending = list.load(2)
+  query = 'new'
+  list.reset()
+  await list.load(0)
+  old.resolve(page(2, 41))
+  await pending
+  assert.equal(list.state.page, 0)
+  assert.equal(list.state.totalElements, 1)
+})
+
 test('does not invent movie statistics or runtime absent from the API', async () => {
   globalThis.fetch = async () => json({ tmdbId: 550, title: 'Movie', posterPath: null, releaseDate: null })
   const movie = await apiProvider.movies.get(550)

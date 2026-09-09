@@ -329,3 +329,28 @@ Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 �
 `cinewith-frontend/`에서 `npm test`와 `npm run build`를 실행한다. 새 의존성 없이 Node 내장 test runner와 기존 Vue의 반응성 API를 사용한다. `tests/ScreenBehaviorTests.js`는 작성자 표시 조건, 페이지 메타데이터 전달, 삭제 후 유효 페이지 보정, 빈 목록, 오류/재시도, 오래된 응답 무시, 미제공 영화 통계 제외, 평점 PATCH와 CSRF·Session 전달 및 401/403 전파를 검증한다. fetch를 대체하므로 Google/TMDB를 호출하지 않는다.
 
 이 테스트는 DOM 클릭 및 실제 OAuth 로그인 전체 흐름을 대체하지 않는다. 브라우저에서는 작성자/타인 버튼, 평점 수정 실패 후 입력 보존, 리뷰·댓글 페이지 이동, TMDB 추천 실패/재시도/빈 결과를 확인한다. 서버 회귀 검증은 기존 전체 JUnit/ArchUnit 테스트를 실행한다.
+
+## 영화별 평점 통계 테스트 (2단계)
+
+`review.integration.RatingStatisticsTests`는 실제 PostgreSQL Testcontainers에서 별도 커밋된 fixture와 Service를 사용한다. 테스트 전체를 rollback 트랜잭션으로 감싸지 않으며 생성/수정/삭제 커밋 후 새 통계 트랜잭션이 반영하는지 확인하고 테스트 후 fixture를 정리한다.
+
+- 로컬 Movie 없음 및 리뷰 0개: null 평균, 0 count, 10개 0 bucket.
+- 5.0점 1개, 여러 평점의 평균/개수/분포, 10개 평점 구간, 소수 둘째 자리 반올림.
+- 실제 ReviewService 생성·평점 수정·삭제 및 마지막 리뷰 삭제 반영.
+- 서로 다른 영화 통계 독립성.
+- Public GET JSON 계약, 0/음수/잘못된 타입 400 INVALID_REQUEST.
+- StatementInspector로 통계 호출의 SQL 2개와 Entity 본문/작성자 미조회 확인. `RATING_STATISTICS_SQL:`로 실제 SQL 기록.
+- 두 집계 사이에 별도 REQUIRES_NEW 연결에서 평점 변경을 커밋해도 진행 중인 응답은 이전 스냅샷을 일관되게 반환하고 다음 조회에는 변경을 반영한다.
+- MovieClient Mock에 호출이 없는 것을 확인하며 Google/TMDB 실제 네트워크에 의존하지 않는다.
+
+Frontend `tests/RatingStatisticsTests.js`는 통계 URL/응답, null 보존, 로딩, 실패/재시도, 영화 이동 및 해제 후 늦은 응답 무시를 검증한다.
+
+관련 검증: `./gradlew test --tests '*RatingStatisticsTests' --no-daemon`, 전체 회귀: `./gradlew test --no-daemon`, Frontend: `npm --prefix cinewith-frontend test` 및 `npm --prefix cinewith-frontend run build`.
+
+## 전체 리뷰 피드와 검색 테스트 (3단계)
+
+`review.integration.ReviewFeedTests`는 PostgreSQL Testcontainers에서 빈 Page, 카드의 모든 필드, 여러 영화가 섞인 offset page와 전체 수/전체 페이지, 같은 `createdAt`의 `id DESC` 안정 정렬을 검증한다.
+
+제목·본문·영화 제목 검색, 대소문자/앞뒤 공백, 불일치 결과, 빈 검색어, 100자 초과/잘못된 페이지 크기도 검증한다. StatementInspector는 content query와 count query가 두 개이고 Member/Movie JOIN으로 필요한 scalar 값을 같이 선택해 목록 크기에 비례한 Member/Movie SQL이 생기지 않음을 확인한다. 검색 content/count query의 lower/LIKE/OR와 MovieClient/TMDB 미호출도 확인한다.
+
+Frontend는 `apiProvider.reviews.listFeed`의 URL·page/query 전달, `usePagedList`의 검색 변경 reset 및 오래된 응답 무시, 로딩·오류/재시도·빈 결과·페이지 이동을 Node 테스트로 검증한다.

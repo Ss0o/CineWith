@@ -42,3 +42,15 @@ Review와 Comment 목록의 `size` 최대값 100은 비정상적으로 큰 단�
 - TODO: 백분위 응답시간과 오류율 목표를 정의한다.
 - TODO: 예상 사용 형태와 테스트 환경을 합의한 후 목표 TPS를 정의한다.
 - TODO: 부하 테스트 및 관측 도구를 선정한다.
+
+## 영화 평점 통계 조회 확인 (2단계, 2026-09-07)
+
+PostgreSQL 17 Testcontainers와 실제 Hibernate StatementInspector로 `RatingStatisticsService.getByMovie` 호출을 확인했다. fixture 저장 SQL을 제외한 집계 SELECT는 2개(AVG/COUNT 1개, GROUP BY/COUNT 1개)이며 Review 본문이나 작성자 Entity를 조회하지 않는다. 요약 1행과 분포 최대 10행만 반환한다. 실제 SQL과 재현 테스트는 `docs/RATING-STATISTICS.md`에 기록한다.
+
+이는 쿼리 형태/개수 검증이며 성능 개선 전후 비교나 100만 건 부하 측정은 아니다. 데이터 증가에 따른 두 스캔 비용, movie JOIN과 review 접근 계획, 데이터 편중, 긴 읽기 스냅샷 유지 비용이 측정 후보다. 새 인덱스나 캐시/집계 저장은 추가하지 않았다.
+
+## 전체 리뷰 피드와 검색 SQL 확인 (3단계, 2026-09-09)
+
+PostgreSQL 17 Testcontainers와 StatementInspector로 `ReviewService.getFeed("title", 0, 2)`를 확인했다. content query 1개와 count query 1개, 총 2개가 실행된다. content query가 Review·Movie·Member를 일반 JOIN하고 필요한 scalar 컬럼을 DTO로 반환하므로 페이지 크기에 따라 Member·Movie별 추가 SELECT가 생기지 않는다.
+
+현재 offset page가 뒤로 갈수록 건너뛰는 행이 늘고, Page의 정확한 전체 건수에는 COUNT 비용이 든다. `lower(column) LIKE '%keyword%'`는 일반 B-tree 인덱스를 활용하기 어려워 데이터가 커지면 title/content/movie.title을 스캔할 수 있다. 실제 실행 계획과 데이터 규모, 분포, 응답 시간을 측정한 뒤 필요한 인덱스·검색 방식을 비교한다. Cursor Pagination, Full Text Search, pg_trgm, Redis와 검색 전용 인덱스는 아직 도입하지 않았다.
