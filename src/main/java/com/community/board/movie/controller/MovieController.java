@@ -1,6 +1,8 @@
 package com.community.board.movie.controller;
 
 import com.community.board.movie.client.MovieClient;
+import com.community.board.movie.client.model.MovieDetail;
+import com.community.board.movie.kofic.KoficClient;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +19,11 @@ import java.util.List;
 public class MovieController {
 
     private final MovieClient movieClient;
+    private final KoficClient koficClient;
 
-    public MovieController(MovieClient movieClient) {
+    public MovieController(MovieClient movieClient, KoficClient koficClient) {
         this.movieClient = movieClient;
+        this.koficClient = koficClient;
     }
 
     @GetMapping("/search")
@@ -35,6 +39,12 @@ public class MovieController {
     @GetMapping("/{tmdbId}")
     public MovieResponse get(@PathVariable Long tmdbId) {
         return MovieResponse.from(movieClient.getMovie(tmdbId));
+    }
+
+    @GetMapping("/{tmdbId}/korean-theatrical")
+    public KoreanTheatricalResponse koreanTheatrical(@PathVariable Long tmdbId) {
+        MovieDetail movie = movieClient.getMovie(tmdbId);
+        return KoreanTheatricalResponse.from(koficClient.getKoreanTheatricalInfo(movie));
     }
 
     @GetMapping("/{tmdbId}/recommendations")

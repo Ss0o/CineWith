@@ -4,6 +4,8 @@ import com.community.board.TestcontainersConfiguration;
 import com.community.board.movie.client.MovieClient;
 import com.community.board.movie.client.model.MovieDetail;
 import com.community.board.movie.client.model.MovieSummary;
+import com.community.board.movie.kofic.KoficClient;
+import com.community.board.movie.kofic.KoreanTheatricalInfo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +30,7 @@ class MovieControllerTests {
 
     @Autowired MockMvc mockMvc;
     @MockitoBean MovieClient movieClient;
+    @MockitoBean KoficClient koficClient;
 
     @Test
     void searchesMoviesPublicly() throws Exception {
@@ -50,6 +53,25 @@ class MovieControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tmdbId").value(550))
                 .andExpect(jsonPath("$.releaseDate").value("1999-10-15"));
+    }
+
+    @Test
+    void returnsKoreanTheatricalInformationPublicly() throws Exception {
+        MovieDetail movie = new MovieDetail(550L, "옵세션", "/poster.jpg", LocalDate.of(2026, 9, 2));
+        when(movieClient.getMovie(550L)).thenReturn(movie);
+        when(koficClient.getKoreanTheatricalInfo(movie)).thenReturn(new KoreanTheatricalInfo(
+                "AVAILABLE", LocalDate.of(2026, 9, 13), "20265146", "옵세션", "Obsession",
+                List.of("공포", "스릴러"), List.of("미국"), 109, "청소년관람불가",
+                LocalDate.of(2026, 9, 2), 13L, 6, new java.math.BigDecimal("3.3"), 475000L));
+
+        mockMvc.perform(get("/api/movies/550/korean-theatrical"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("AVAILABLE"))
+                .andExpect(jsonPath("$.titleEnglish").value("Obsession"))
+                .andExpect(jsonPath("$.runningTimeMinutes").value(109))
+                .andExpect(jsonPath("$.boxOfficeRank").value(6))
+                .andExpect(jsonPath("$.accumulatedAudience").value(475000));
+        verify(koficClient).getKoreanTheatricalInfo(movie);
     }
 
     @Test

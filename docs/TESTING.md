@@ -252,6 +252,15 @@ Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 �
 
 일반 자동 테스트는 `TMDB_ACCESS_TOKEN`이나 `api.themoviedb.org`의 가용성에 의존하지 않는다. 실제 TMDB 계약 Smoke Test는 수동 검증으로 분리한다.
 
+## 외부 KOFIC API 테스트
+
+`KoficRestClientTests`는 `MockRestServiceServer`를 사용해 실제 KOFIC 네트워크와 키 없이 실행한다.
+
+- 제목이 단일 매칭된 KOFIC 영화의 상세 정보와 전일 박스오피스 순위·매출 점유율·누적 관객 수를 결합한다.
+- 제목이 일치하지 않거나 동명작을 안전하게 해소할 수 없으면 `NOT_AVAILABLE`를 반환하고 잘못된 KOFIC 정보를 연결하지 않는다.
+- KOFIC 키가 없으면 외부 호출 없이 `UNAVAILABLE`를 반환한다.
+- 일반 자동 테스트는 `KOFIC_API_KEY`나 `kobis.or.kr`의 가용성에 의존하지 않는다.
+
 ## Docker Compose와 Testcontainers
 
 - 로컬 개발 애플리케이션은 Docker Compose의 PostgreSQL을 사용한다.

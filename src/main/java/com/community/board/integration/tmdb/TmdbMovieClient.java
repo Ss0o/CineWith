@@ -11,6 +11,8 @@ import com.community.board.integration.tmdb.exception.MovieNotFoundException;
 import com.community.board.movie.client.MovieClient;
 import com.community.board.movie.client.model.MovieDetail;
 import com.community.board.movie.client.model.MovieSummary;
+import com.community.board.movie.client.model.DiscoveryMovie;
+import com.community.board.movie.client.model.MovieCategory;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -97,6 +99,27 @@ public class TmdbMovieClient implements MovieClient {
                 .requiredBody(TmdbMovieResultsResponse.class));
 
         return response.results().stream().map(this::toSummary).toList();
+    }
+
+    @Override public List<DiscoveryMovie> getTopRated() { return getDiscovery("/3/movie/top_rated", null); }
+    @Override public List<DiscoveryMovie> getNowPlayingDiscovery() { return getDiscovery("/3/movie/now_playing", null); }
+    @Override public List<DiscoveryMovie> getUpcoming() { return getDiscovery("/3/movie/upcoming", null); }
+    @Override public List<DiscoveryMovie> getByCategory(MovieCategory category) {
+        return getDiscovery("/3/discover/movie", category.tmdbGenreId());
+    }
+
+    private List<DiscoveryMovie> getDiscovery(String path, Integer genreId) {
+        TmdbMovieResultsResponse response = execute(() -> restClient.get().uri(builder -> {
+            UriBuilder result = addLanguageAndRegion(builder.path(path));
+            if (genreId != null) result = result.queryParam("with_genres", genreId).queryParam("sort_by", "popularity.desc");
+            return result.build();
+        }).retrieve().onStatus(status -> status.value() == 401 || status.value() == 403,
+                (request, result) -> { throw new MovieClientAuthenticationException(); })
+                .onStatus(HttpStatusCode::is5xxServerError, (request, result) -> { throw new MovieClientUnavailableException(); })
+                .requiredBody(TmdbMovieResultsResponse.class));
+        return response.results().stream().map(result -> new DiscoveryMovie(result.id(), result.title(), result.posterPath(),
+                parseReleaseDate(result.releaseDate()), result.voteAverage() == null ? 0 : result.voteAverage(),
+                result.voteCount() == null ? 0 : result.voteCount(), result.popularity() == null ? 0 : result.popularity())).toList();
     }
 
     private UriBuilder addSearchParameters(UriBuilder uriBuilder, String query) {
