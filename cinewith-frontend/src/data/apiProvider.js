@@ -24,10 +24,12 @@ export const apiProvider = {
     async logout() { await apiRequest('/api/logout', { method: 'POST' }); clearCsrfToken() },
   },
   movies: {
+    async discoveryHome() { return apiRequest('/api/movies/discovery/home') },
     async ratingStatistics(id) { return apiRequest(`/api/movies/${id}/rating-statistics`) },
     async nowPlaying() { return (await apiRequest('/api/movies/now-playing')).map(movieView) },
     async search(query) { return (await apiRequest(`/api/movies/search?query=${encodeURIComponent(query)}`)).map(movieView) },
     async get(id) { return movieView(await apiRequest(`/api/movies/${id}`)) },
+    async koreanTheatrical(id) { return apiRequest(`/api/movies/${id}/korean-theatrical`) },
     async recommendations(id) { return (await apiRequest(`/api/movies/${id}/recommendations`)).map(movieView) },
   },
   reviews: {

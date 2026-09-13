@@ -17,6 +17,9 @@ const errorMessage = ref('')
 const recommendations = ref([])
 const recommendationsLoading = ref(false)
 const recommendationsError = ref('')
+const theatrical = ref(null)
+const theatricalLoading = ref(false)
+const theatricalError = ref('')
 const activeTab = ref('reviews')
 const reviews = usePagedList((page, size) => dataService.reviews.listByMovie(props.id, page, size))
 let version = 0
@@ -45,15 +48,35 @@ async function loadRecommendations(id = props.id, request = version) {
     if (request === version) recommendationsLoading.value = false
   }
 }
+async function loadTheatrical(id = props.id, request = version) {
+  theatricalLoading.value = true
+  theatricalError.value = ''
+  try {
+    const result = await dataService.movies.koreanTheatrical(id)
+    if (request === version) theatrical.value = result
+  } catch (error) {
+    if (request === version) theatricalError.value = error.message
+  } finally {
+    if (request === version) theatricalLoading.value = false
+  }
+}
+function audienceLabel(value) {
+  const audience = Number(value)
+  if (!Number.isFinite(audience)) return ''
+  if (audience >= 10000) return `${(audience / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만명`
+  return `${audience.toLocaleString('ko-KR')}명`
+}
 watch(() => props.id, (id) => {
   const request = ++version
   movie.value = null
   recommendations.value = []
+  theatrical.value = null
   activeTab.value = 'reviews'
   reviews.reset()
   loadMovie(id, request)
   reviews.load(0)
   loadRecommendations(id, request)
+  loadTheatrical(id, request)
 }, { immediate: true })
 onBeforeUnmount(() => { version++; reviews.reset() })
 </script>
@@ -74,6 +97,26 @@ onBeforeUnmount(() => { version++; reviews.reset() })
         <p class="meta">{{ movie.releaseDate || '개봉일 미정' }}</p>
         <RouterLink class="btn btn-primary" :to="`/reviews/new?movieId=${movie.id}`">이 영화 리뷰 쓰기</RouterLink>
       </div>
+    </section>
+    <section v-if="movie" class="theatrical-info" aria-label="국내 극장 정보">
+      <p v-if="theatricalLoading" class="meta">국내 극장 정보를 불러오는 중입니다.</p>
+      <div v-else-if="theatricalError" role="alert">
+        <p class="meta">국내 극장 정보를 불러오지 못했습니다.</p>
+        <button class="btn btn-secondary" @click="loadTheatrical()">다시 불러오기</button>
+      </div>
+      <template v-else-if="theatrical?.status === 'AVAILABLE'">
+        <h3>{{ theatrical.title }} <span v-if="theatrical.titleEnglish" class="meta">{{ theatrical.titleEnglish }}</span></h3>
+        <p class="meta">{{ theatrical.genres.join(' / ') }}<template v-if="theatrical.nations.length"> · {{ theatrical.nations.join(', ') }}</template></p>
+        <p class="meta"><template v-if="theatrical.runningTimeMinutes">{{ theatrical.runningTimeMinutes }}분</template><template v-if="theatrical.watchGrade"> · {{ theatrical.watchGrade }}</template></p>
+        <p v-if="theatrical.boxOfficeRank || theatrical.daysSinceRelease || theatrical.accumulatedAudience" class="meta">
+          <template v-if="theatrical.boxOfficeRank">박스오피스 {{ theatrical.boxOfficeRank }}위<template v-if="theatrical.salesShare !== null"> (매출 점유율 {{ theatrical.salesShare }}%)</template></template>
+          <template v-if="theatrical.daysSinceRelease"> · 개봉 {{ theatrical.daysSinceRelease }}일째</template>
+          <template v-if="theatrical.accumulatedAudience"> · 누적 관객 {{ audienceLabel(theatrical.accumulatedAudience) }}</template>
+        </p>
+        <p v-if="theatrical.asOfDate" class="meta as-of">박스오피스 기준일 {{ theatrical.asOfDate }}</p>
+      </template>
+      <p v-else-if="theatrical?.status === 'NOT_AVAILABLE'" class="meta">국내 극장 정보가 등록되지 않은 영화입니다.</p>
+      <p v-else class="meta">현재 국내 극장 정보를 사용할 수 없습니다.</p>
     </section>
     <MovieRatingStatistics :tmdb-id="props.id" />
     <div class="seg" role="group" aria-label="영화 정보 선택">
@@ -117,6 +160,10 @@ onBeforeUnmount(() => { version++; reviews.reset() })
 <style scoped>
 .movie-detail { max-width: 1000px; margin: auto; padding: 24px; display: grid; gap: 24px; }
 .movie-heading { display: flex; align-items: center; gap: 24px; }
+.theatrical-info { padding: 18px 20px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.theatrical-info h3 { margin: 0 0 8px; }
+.theatrical-info p { margin: 5px 0; }
+.as-of { font-size: 12px; }
 .review-item { display: block; padding: 16px 0; border-bottom: 1px solid var(--color-divider); color: var(--color-text); }
 .review-item h4 { margin: 0 0 8px; }
 .excerpt { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -29,6 +29,8 @@ PostgreSQL is the confirmed V1 database engine. The PostgreSQL JDBC Driver is th
 TMDB 연동은 `MovieClient` Application 경계와 `TmdbMovieClient` Adapter로 분리한다. 외부 JSON DTO와 내부 조회 모델, 영속 Movie Entity는 서로 다른 모델이며 TMDB 조회만으로 Repository를 호출하지 않는다.
 Service와 Controller는 TMDB 구현체인 `TmdbMovieClient`에 직접 의존하지 않고 `MovieClient` 경계를 사용하며, 이 의존 방향은 Architecture Test로 검증한다.
 
+KOFIC 보조 정보는 `KoficClient` 경계와 `KoficRestClient` Adapter로 분리한다. `MovieController`는 기존 `MovieClient`로 TMDB 기본 정보를 확보한 후에만 KOFIC 경계에 전달한다. KOFIC Adapter는 제목의 공백·대소문자를 정규화해 단일 후보를 선택한다. 동명 후보는 TMDB 개봉일과 완전히 일치하는 후보를 우선하며, 전 세계 최초 개봉일과 한국 개봉일이 다를 수 있으므로 같은 연도의 후보가 하나일 때만 보조로 선택한다. KOFIC 영화코드·영화상세·전일 전국 박스오피스는 조회 중에만 사용하며, `Movie` Entity나 Repository에 저장하지 않는다. KOFIC 결과는 보조 정보이므로 키 미설정·통신 오류는 `UNAVAILABLE` 상태로 응답해 TMDB 영화 상세 조회를 가리지 않는다.
+
 Member, Movie, and Review use `GenerationType.IDENTITY` for their internal `Long` primary keys. Movie keeps the external `tmdbId` as a separate UNIQUE business identifier, and Review enforces one row per Member and Movie. The migration strategy remains to be selected.
 Review rating은 API·도메인·PostgreSQL에서 같은 `BigDecimal` 값을 사용하며 `numeric(2,1)`로 저장한다. 범위와 `0.5` 단위는 Review 도메인이 보장하고, DB CHECK 제약은 Migration 도구 선정 시 검토한다.
 
@@ -65,3 +67,7 @@ TMDB 상세 API에 합치지 않고 별도 통계 API로 제공하여 외부 장
 Review의 `member`, `movie`는 LAZY이므로 Entity `ReviewView.from`으로 목록을 변환하면 Member/Movie별 추가 조회(N+1)가 발생할 수 있다. 전체 피드는 필요한 scalar 컬럼을 content query의 일반 JOIN으로 함께 선택해 이를 피한다. ToMany 연관관계가 없으므로 Fetch Join은 가능할 수 있지만, 페이징 목록에 맞춘 DTO projection이 필요한 데이터와 SQL 형태를 가장 명확히 제한한다.
 
 검색어가 없을 때와 있을 때는 각각 별도 JPQL을 사용한다. null 파라미터와 `lower`를 한 SQL에 혼합해 PostgreSQL의 타입 추론에 의존하지 않는다. 검색은 Service에서 trim하며 빈 값은 일반 피드로, 그 외에는 bound parameter로 `title`, `content`, `movie.title`의 lower/LIKE 조건을 실행한다. 기본 정렬은 `createdAt DESC, id DESC`이고 PageRequest는 offset/limit만 적용한다. Vue `ReviewFeedView`는 URL query `q`를 검색 상태로 사용하므로 페이지 이동에는 검색어가 유지되고 `usePagedList`의 request version이 이전 응답을 무시한다.
+
+## 영화 탐색 홈 (3.5단계)
+
+`MovieDiscoveryController → MovieDiscoveryService → MovieClient` 경계로 외부 호출을 분리한다. 현재 상영·개봉 예정은 `MoviePopularityPolicy`가 TMDB 인기도를 우선하고 개봉일과 TMDB ID로 안정적으로 정렬한다. 홈 API는 외부 영화 섹션만 집계하고 최신 리뷰는 기존 API로 독립 조회한다. Caffeine cache는 완전한 홈 결과만 저장하며 TMDB 섹션 실패가 포함된 응답은 캐시하지 않는다.

@@ -22,8 +22,10 @@
 | `GET` | `/api/members/me` | 현재 회원 정보 조회 | `MEMBER` | `200 OK` |
 | `POST` | `/api/logout` | 현재 서비스 Session 로그아웃 | 인증된 사용자 | `204 No Content` |
 | `GET` | `/api/movies/now-playing` | TMDB 현재 상영작 조회 | Public | `200 OK` |
+| `GET` | `/api/movies/discovery/home` | 추천·탐색 홈 섹션 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/search?query={query}` | TMDB 영화 검색 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}` | TMDB 영화 상세 조회 | Public | `200 OK` |
+| `GET` | `/api/movies/{tmdbId}/korean-theatrical` | KOFIC 국내 극장 보조 정보 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/rating-statistics` | Cinewith 리뷰 평점 통계 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/recommendations` | TMDB 추천 영화 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/{tmdbId}/reviews` | 특정 영화의 리뷰 목록 조회 | Public | `200 OK` |
@@ -116,6 +118,28 @@ TMDB API를 사용해 `query`와 일치하는 영화를 검색한다.
 - 접근 권한: Public
 - 성공: `200 OK`
 - 대상 영화 없음: `404 Not Found`
+
+### GET /api/movies/{tmdbId}/korean-theatrical
+
+TMDB 영화에 대응하는 KOFIC 국내 극장 보조 정보를 조회한다. 이 API는 TMDB 영화 상세를 먼저 조회하고 KOFIC 영화코드를 안전하게 매칭한다. KOFIC 정보가 없거나 동명작 때문에 단일 매칭이 불가능한 경우에도 영화 자체가 없다는 뜻은 아니므로 `200 OK`와 `NOT_AVAILABLE` 상태를 반환한다.
+
+Response DTO:
+
+| 필드 | 설명 |
+| --- | --- |
+| `status` | `AVAILABLE`, `NOT_AVAILABLE`, `UNAVAILABLE` |
+| `asOfDate` | 박스오피스 통계 기준일. `AVAILABLE`이고 통계 조회가 성공했을 때 전일 날짜 |
+| `title`, `titleEnglish` | KOFIC 영화명과 영문명 |
+| `genres`, `nations` | KOFIC 장르·국가 목록 |
+| `runningTimeMinutes`, `watchGrade` | 상영 시간(분)과 관람등급 |
+| `domesticReleaseDate`, `daysSinceRelease` | 국내 개봉일과 조회일 기준 개봉 경과 일수(개봉일을 1일째로 계산) |
+| `boxOfficeRank`, `salesShare`, `accumulatedAudience` | 전일 전국 박스오피스 순위, 매출 점유율(%), 누적 관객 수. 전일 목록 밖 영화는 null |
+
+- 접근 권한: Public
+- 성공: `200 OK`
+- TMDB 대상 영화 없음: `404 Not Found`
+- KOFIC 보조 정보 없음: `200 OK`, `status: NOT_AVAILABLE`
+- KOFIC 키 미설정 또는 KOFIC 장애: `200 OK`, `status: UNAVAILABLE`
 
 ### GET /api/movies/{tmdbId}/recommendations
 
