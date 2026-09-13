@@ -26,7 +26,7 @@ PostgreSQL is the confirmed V1 database engine. The PostgreSQL JDBC Driver is th
 
 로컬 개발환경은 `compose.yaml`의 backend와 `postgres:17-alpine`을 사용한다. backend는 Compose Service 이름인 `postgres`로 DB에 연결하고 healthcheck 통과 후 시작한다. Migration 도구가 아직 없어 Compose에서만 임시로 Hibernate `update`를 사용하며 production 정책이 아니다. Repository Integration Test는 Compose DB가 아니라 기존 PostgreSQL Testcontainers를 계속 사용한다.
 
-TMDB 연동은 `MovieClient` Application 경계와 `TmdbMovieClient` Adapter로 분리한다. 외부 JSON DTO와 내부 조회 모델, 영속 Movie Entity는 서로 다른 모델이며 TMDB 조회만으로 Repository를 호출하지 않는다.
+TMDB 연동은 `MovieClient` Application 경계와 `TmdbMovieClient` Adapter로 분리한다. 외부 JSON DTO와 내부 조회 모델, 영속 Movie Entity는 서로 다른 모델이며 TMDB 조회만으로 Repository를 호출하지 않는다. 영화 상세는 기본 상세와 `credits`를 한 외부 요청으로 받아 조회 모델에만 담고, 출연진은 표시 순서 상위 12명, 제작진은 연출·각본 부서로 한정한다.
 Service와 Controller는 TMDB 구현체인 `TmdbMovieClient`에 직접 의존하지 않고 `MovieClient` 경계를 사용하며, 이 의존 방향은 Architecture Test로 검증한다.
 
 KOFIC 보조 정보는 `KoficClient` 경계와 `KoficRestClient` Adapter로 분리한다. `MovieController`는 기존 `MovieClient`로 TMDB 기본 정보를 확보한 후에만 KOFIC 경계에 전달한다. KOFIC Adapter는 제목의 공백·대소문자를 정규화해 단일 후보를 선택한다. 동명 후보는 TMDB 개봉일과 완전히 일치하는 후보를 우선하며, 전 세계 최초 개봉일과 한국 개봉일이 다를 수 있으므로 같은 연도의 후보가 하나일 때만 보조로 선택한다. KOFIC 영화코드·영화상세·전일 전국 박스오피스는 조회 중에만 사용하며, `Movie` Entity나 Repository에 저장하지 않는다. KOFIC 결과는 보조 정보이므로 키 미설정·통신 오류는 `UNAVAILABLE` 상태로 응답해 TMDB 영화 상세 조회를 가리지 않는다.
@@ -48,7 +48,7 @@ Comment Application Use Case는 `CommentService`가 현재 Principal의 `memberI
 
 ## 프론트엔드 페이지 상태 (1단계)
 
-`apiProvider`는 기존 HTTP 응답을 화면 모델로 변환하며 페이지 메타데이터를 유지한다. `usePagedList`는 Vue 반응성 상태로 로딩/오류/페이지와 오래된 비동기 응답을 관리한다. `PaginationControls`는 페이지 번호와 이동 이벤트만 담당한다. 영화/리뷰 상세의 부가 조회 상태는 핵심 콘텐츠와 분리한다. 백엔드 Controller/Service/Repository 및 DB 구조, 의존성은 변경하지 않는다.
+`apiProvider`는 기존 HTTP 응답을 화면 모델로 변환하며 페이지 메타데이터를 유지한다. `usePagedList`는 Vue 반응성 상태로 로딩/오류/페이지와 오래된 비동기 응답을 관리한다. `PaginationControls`는 페이지 번호와 이동 이벤트만 담당한다. 영화 상세는 TMDB의 배경·줄거리·출연·제작진을 기본 콘텐츠로, Cinewith 통계와 KOFIC 보조 정보 및 추천·리뷰 목록은 독립 상태로 표현한다. 백엔드 Controller/Service/Repository 및 DB 구조, 의존성은 변경하지 않는다.
 
 ## 영화별 리뷰 평점 집계 (2단계)
 

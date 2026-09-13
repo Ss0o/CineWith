@@ -52,6 +52,7 @@ class MovieControllerTests {
         mockMvc.perform(get("/api/movies/550"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tmdbId").value(550))
+                .andExpect(jsonPath("$.cast").isArray())
                 .andExpect(jsonPath("$.releaseDate").value("1999-10-15"));
     }
 

@@ -5,7 +5,12 @@ const dateLabel = (value) => value ? new Date(value).toLocaleDateString('ko-KR')
 
 function movieView(movie) {
   const year = movie.releaseDate ? Number(movie.releaseDate.slice(0, 4)) : null
-  return { id: movie.tmdbId, tmdbId: movie.tmdbId, title: movie.title, posterPath: movie.posterPath, releaseDate: movie.releaseDate, year }
+  return {
+    id: movie.tmdbId, tmdbId: movie.tmdbId, title: movie.title, originalTitle: movie.originalTitle,
+    overview: movie.overview, posterPath: movie.posterPath, backdropPath: movie.backdropPath,
+    releaseDate: movie.releaseDate, year, genres: movie.genres ?? [], productionCountries: movie.productionCountries ?? [],
+    runtimeMinutes: movie.runtimeMinutes, cast: movie.cast ?? [], crew: movie.crew ?? [],
+  }
 }
 
 function reviewView(review) {
