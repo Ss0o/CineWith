@@ -9,7 +9,7 @@
 
 ## TMDB Client 구현
 
-- Application 경계는 `MovieClient`이며 현재 상영작, 영화 검색, 상세, 추천 조회만 제공한다.
+- Application 경계는 `MovieClient`이며 현재 상영작, 영화 검색, 상세, 추천 조회만 제공한다. 상세 조회는 `append_to_response=credits`로 기본 상세와 출연진·제작진을 한 요청에 결합한다.
 - 실제 구현은 Spring MVC와 같은 동기식 모델의 `RestClient`를 사용하는 `TmdbMovieClient`다. WebFlux 의존성은 추가하지 않는다.
 - TMDB API Read Access Token을 `Authorization: Bearer {token}` Header로 전송한다. API Key Query Parameter 방식은 사용하지 않는다.
 - Token은 `TMDB_ACCESS_TOKEN` 환경 변수에서만 주입한다.
@@ -23,7 +23,7 @@
 
 - 현재 상영작: `GET /3/movie/now_playing`
 - 검색: `GET /3/search/movie`
-- 상세: `GET /3/movie/{movie_id}`
+- 상세: `GET /3/movie/{movie_id}?append_to_response=credits`
 - 추천: `GET /3/movie/{movie_id}/recommendations`
 
 ### 오류 경계

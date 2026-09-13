@@ -5,6 +5,8 @@ import com.community.board.integration.tmdb.exception.MovieClientException;
 import com.community.board.integration.tmdb.exception.MovieClientUnavailableException;
 import com.community.board.integration.tmdb.exception.MovieNotFoundException;
 import com.community.board.movie.client.model.MovieDetail;
+import com.community.board.movie.client.model.MovieCastMember;
+import com.community.board.movie.client.model.MovieCrewMember;
 import com.community.board.movie.client.model.MovieSummary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,13 +88,23 @@ class TmdbMovieClientTests {
 
     @Test
     void mapsMovieDetailResponse() {
-        server.expect(requestTo("https://tmdb.test/3/movie/550?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/550?append_to_response=credits&language=ko-KR"))
                 .andRespond(withSuccess("""
                         {
                           "id": 550,
                           "title": "Fight Club",
+                          "original_title": "Fight Club",
+                          "overview": "An insomniac meets Tyler Durden.",
                           "poster_path": "/poster.jpg",
-                          "release_date": "1999-10-15"
+                          "backdrop_path": "/backdrop.jpg",
+                          "release_date": "1999-10-15",
+                          "genres": [{ "id": 18, "name": "드라마" }],
+                          "production_countries": [{ "iso_3166_1": "US", "name": "미국" }],
+                          "runtime": 139,
+                          "credits": {
+                            "cast": [{ "id": 819, "name": "Edward Norton", "character": "The Narrator", "profile_path": "/norton.jpg" }],
+                            "crew": [{ "id": 7467, "name": "David Fincher", "job": "Director", "department": "Directing", "profile_path": "/fincher.jpg" }]
+                          }
                         }
                         """, MediaType.APPLICATION_JSON));
 
@@ -101,8 +113,16 @@ class TmdbMovieClientTests {
         assertThat(result).isEqualTo(new MovieDetail(
                 550L,
                 "Fight Club",
+                "Fight Club",
+                "An insomniac meets Tyler Durden.",
                 "/poster.jpg",
-                LocalDate.of(1999, 10, 15)
+                "/backdrop.jpg",
+                LocalDate.of(1999, 10, 15),
+                List.of("드라마"),
+                List.of("미국"),
+                139,
+                List.of(new MovieCastMember(819L, "Edward Norton", "The Narrator", "/norton.jpg")),
+                List.of(new MovieCrewMember(7467L, "David Fincher", "Director", "Directing", "/fincher.jpg"))
         ));
         server.verify();
     }
@@ -192,7 +212,7 @@ class TmdbMovieClientTests {
 
     @Test
     void mapsEmptyReleaseDateToNull() {
-        server.expect(requestTo("https://tmdb.test/3/movie/1?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/1?append_to_response=credits&language=ko-KR"))
                 .andRespond(withSuccess("""
                         {
                           "id": 1,
@@ -210,7 +230,7 @@ class TmdbMovieClientTests {
 
     @Test
     void convertsInvalidReleaseDateToMovieClientException() {
-        server.expect(requestTo("https://tmdb.test/3/movie/1?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/1?append_to_response=credits&language=ko-KR"))
                 .andRespond(withSuccess("""
                         {
                           "id": 1,
@@ -230,7 +250,7 @@ class TmdbMovieClientTests {
 
     @Test
     void convertsNotFoundResponse() {
-        server.expect(requestTo("https://tmdb.test/3/movie/999?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/999?append_to_response=credits&language=ko-KR"))
                 .andRespond(withResourceNotFound());
 
         assertThatThrownBy(() -> movieClient.getMovie(999L))
@@ -240,7 +260,7 @@ class TmdbMovieClientTests {
 
     @Test
     void convertsAuthenticationFailure() {
-        server.expect(requestTo("https://tmdb.test/3/movie/550?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/550?append_to_response=credits&language=ko-KR"))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
         assertThatThrownBy(() -> movieClient.getMovie(550L))
@@ -250,7 +270,7 @@ class TmdbMovieClientTests {
 
     @Test
     void convertsServerError() {
-        server.expect(requestTo("https://tmdb.test/3/movie/550?language=ko-KR"))
+        server.expect(requestTo("https://tmdb.test/3/movie/550?append_to_response=credits&language=ko-KR"))
                 .andRespond(withServerError());
 
         assertThatThrownBy(() -> movieClient.getMovie(550L))
