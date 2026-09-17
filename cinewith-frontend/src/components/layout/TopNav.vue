@@ -12,8 +12,8 @@ const { state, openLoginModal } = useAuth()
 
 <template>
   <div class="nav" style="height: 56px; padding: 0 20px">
-    <RouterLink to="/" class="nav-brand" style="display: flex; align-items: center; gap: 8px; font-size: 16px; margin-right: 0">
-      <i class="ph-fill ph-film-reel" style="font-size: 20px; color: var(--color-accent)"></i>씨네위드
+    <RouterLink to="/" class="nav-brand" style="display: flex; align-items: center; gap: 9px; font-size: 21px; margin-right: 0">
+      <i class="ph-fill ph-film-reel" style="font-size: 25px; color: var(--color-accent)"></i>CINEWITH
     </RouterLink>
     <RouterLink v-if="showBoardLink" to="/reviews" style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 60%, transparent)">
       리뷰 게시판

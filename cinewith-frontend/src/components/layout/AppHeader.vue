@@ -1,17 +1,20 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AvatarBadge from '../AvatarBadge.vue'
 import { useAuth, AUTH_STATE } from '../../composables/useAuth'
 
-defineProps({
-  showSearch: { type: Boolean, default: true },
-})
-
 const emit = defineEmits(['toggle-drawer'])
 
+const route = useRoute()
+const router = useRouter()
 const { state, openLoginModal, logout } = useAuth()
 const isDropdownOpen = ref(false)
+const query = ref(typeof route.query.q === 'string' ? route.query.q : '')
+
+watch(() => route.query.q, (value) => {
+  query.value = typeof value === 'string' ? value : ''
+})
 
 function toggleDropdown() {
   isDropdownOpen.value = !isDropdownOpen.value
@@ -21,10 +24,15 @@ function handleLogout() {
   isDropdownOpen.value = false
   logout()
 }
+
+async function search() {
+  const normalizedQuery = query.value.trim()
+  await router.push(normalizedQuery ? { path: '/', query: { q: normalizedQuery } } : { path: '/' })
+}
 </script>
 
 <template>
-  <div class="nav" style="height: 60px; padding: 0 20px; gap: 18px">
+  <div class="nav" style="min-height: 60px; padding: 0 20px; gap: 18px; flex-wrap: wrap">
     <button
       class="btn btn-icon btn-secondary mobile-only"
       style="border-color: transparent"
@@ -34,18 +42,14 @@ function handleLogout() {
       <i class="ph ph-list" style="font-size: 20px"></i>
     </button>
 
-    <RouterLink to="/" class="nav-brand" style="display: flex; align-items: center; gap: 8px; margin-right: 0">
-      <i class="ph-fill ph-film-reel" style="font-size: 22px; color: var(--color-accent)"></i>씨네위드
+    <RouterLink to="/" class="nav-brand" style="display: flex; align-items: center; gap: 9px; margin-right: 0; font-size: 23px">
+      <i class="ph-fill ph-film-reel" style="font-size: 27px; color: var(--color-accent)"></i>CINEWITH
     </RouterLink>
 
-    <div
-      v-if="showSearch"
-      class="desktop-only"
-      style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 420px; height: 34px; padding: 0 12px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md)"
-    >
-      <i class="ph ph-magnifying-glass" style="font-size: 15px; color: color-mix(in srgb, var(--color-text) 45%, transparent)"></i>
-      <span style="font: 400 13px/1 var(--font-body); color: color-mix(in srgb, var(--color-text) 40%, transparent)">영화 · 리뷰 · 유저 검색</span>
-    </div>
+    <form class="header-search" @submit.prevent="search">
+      <input v-model="query" class="input" aria-label="영화 제목 검색" placeholder="영화 제목을 검색하세요" />
+      <button class="btn btn-primary" type="submit" aria-label="검색"><i class="ph ph-magnifying-glass" style="font-size: 16px"></i></button>
+    </form>
 
     <div style="flex: 1"></div>
 

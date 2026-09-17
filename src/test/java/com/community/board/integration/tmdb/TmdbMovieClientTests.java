@@ -7,6 +7,8 @@ import com.community.board.integration.tmdb.exception.MovieNotFoundException;
 import com.community.board.movie.client.model.MovieDetail;
 import com.community.board.movie.client.model.MovieCastMember;
 import com.community.board.movie.client.model.MovieCrewMember;
+import com.community.board.movie.client.model.DiscoveryMovie;
+import com.community.board.movie.client.model.MovieCategory;
 import com.community.board.movie.client.model.MovieSummary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -160,6 +162,30 @@ class TmdbMovieClientTests {
                 .andRespond(withSuccess("{\"results\":[]}", MediaType.APPLICATION_JSON));
 
         assertThat(movieClient.getNowPlaying()).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void requestsAdditionalGenreDiscoveryUsingItsTmdbGenreId() {
+        server.expect(requestTo("https://tmdb.test/3/discover/movie?language=ko-KR&region=KR&with_genres=12&sort_by=popularity.desc&page=1"))
+                .andRespond(withSuccess("""
+                        {
+                          "results": [
+                            {
+                              "id": 98,
+                              "title": "모험 영화",
+                              "poster_path": "/adventure.jpg",
+                              "release_date": "2026-09-01",
+                              "vote_average": 7.5,
+                              "vote_count": 100,
+                              "popularity": 20.0
+                            }
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(movieClient.getByCategory(MovieCategory.ADVENTURE)).containsExactly(new DiscoveryMovie(
+                98L, "모험 영화", "/adventure.jpg", LocalDate.of(2026, 9, 1), 7.5, 100, 20.0));
         server.verify();
     }
 

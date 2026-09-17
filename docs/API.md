@@ -103,6 +103,22 @@ TMDB의 현재 상영작을 조회해 메인 화면에 제공한다. `TMDB_LANGU
 - 접근 권한: Public
 - 성공: `200 OK`
 
+### GET /api/movies/discovery/home
+
+영화 탐색 홈에 표시할 현재 상영, 일반 추천, 개봉 예정과 장르별 영화를 함께 조회한다. 장르는 `action`, `adventure`, `animation`, `comedy`, `drama`, `fantasy`, `horror`, `romance`, `sf`, `thriller` 키로 제공한다. 각 섹션은 `movies`와 `status`를 가지며, 장르별 영화는 TMDB 인기도 순이다.
+
+- 접근 권한: Public
+- 성공: `200 OK`
+- 조회 결과는 서비스 DB에 저장하지 않는다.
+
+### GET /api/movies/discovery/{section}?page={page}
+
+사이드바에서 선택한 영화 탐색 목록을 TMDB 페이지 단위로 조회한다. `section`은 `recommended`, `now-playing`, `upcoming` 또는 홈에서 지원하는 장르 키이며, `page`는 0부터 시작해 최대 499다. 응답은 `content`, `page`, `size`(20), `totalElements`, `totalPages`를 제공한다.
+
+- 접근 권한: Public
+- 성공: `200 OK`
+- 조회 결과는 서비스 DB에 저장하지 않는다.
+
 ### GET /api/movies/search?query={query}
 
 TMDB API를 사용해 `query`와 일치하는 영화를 검색한다.
