@@ -119,6 +119,8 @@ TMDB API를 사용해 `query`와 일치하는 영화를 검색한다.
 - 성공: `200 OK`
 - 대상 영화 없음: `404 Not Found`
 
+Response DTO는 `tmdbId`, `title`, `originalTitle`, `overview`, `posterPath`, `backdropPath`, `releaseDate`, `genres`, `productionCountries`, `runtimeMinutes`, `cast`, `crew`를 제공한다. `cast`는 표시 순서 상위 12명의 `personId`, `name`, `character`, `profilePath`이고, `crew`는 연출·각본 부서의 `personId`, `name`, `job`, `department`, `profilePath`다. TMDB가 제공하지 않는 문자열·이미지·상영 시간은 null일 수 있고 컬렉션은 빈 배열이다.
+
 ### GET /api/movies/{tmdbId}/korean-theatrical
 
 TMDB 영화에 대응하는 KOFIC 국내 극장 보조 정보를 조회한다. 이 API는 TMDB 영화 상세를 먼저 조회하고 KOFIC 영화코드를 안전하게 매칭한다. KOFIC 정보가 없거나 동명작 때문에 단일 매칭이 불가능한 경우에도 영화 자체가 없다는 뜻은 아니므로 `200 OK`와 `NOT_AVAILABLE` 상태를 반환한다.

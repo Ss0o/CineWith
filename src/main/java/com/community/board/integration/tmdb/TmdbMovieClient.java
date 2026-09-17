@@ -10,6 +10,8 @@ import com.community.board.integration.tmdb.exception.MovieClientUnavailableExce
 import com.community.board.integration.tmdb.exception.MovieNotFoundException;
 import com.community.board.movie.client.MovieClient;
 import com.community.board.movie.client.model.MovieDetail;
+import com.community.board.movie.client.model.MovieCastMember;
+import com.community.board.movie.client.model.MovieCrewMember;
 import com.community.board.movie.client.model.MovieSummary;
 import com.community.board.movie.client.model.DiscoveryMovie;
 import com.community.board.movie.client.model.MovieCategory;
@@ -65,7 +67,8 @@ public class TmdbMovieClient implements MovieClient {
     @Override
     public MovieDetail getMovie(long tmdbId) {
         TmdbMovieResponse response = execute(() -> restClient.get()
-                .uri(uriBuilder -> addLanguage(uriBuilder.path("/3/movie/{movieId}"))
+                .uri(uriBuilder -> addLanguage(uriBuilder.path("/3/movie/{movieId}")
+                                .queryParam("append_to_response", "credits"))
                         .build(tmdbId))
                 .retrieve()
                 .onStatus(status -> status.value() == 404,
@@ -79,8 +82,29 @@ public class TmdbMovieClient implements MovieClient {
         return new MovieDetail(
                 response.id(),
                 response.title(),
+                response.originalTitle(),
+                response.overview(),
                 response.posterPath(),
-                parseReleaseDate(response.releaseDate())
+                response.backdropPath(),
+                parseReleaseDate(response.releaseDate()),
+                response.genres() == null ? List.of() : response.genres().stream()
+                        .map(TmdbMovieResponse.TmdbNamedValue::name)
+                        .filter(this::hasText)
+                        .toList(),
+                response.productionCountries() == null ? List.of() : response.productionCountries().stream()
+                        .map(TmdbMovieResponse.TmdbProductionCountry::name)
+                        .filter(this::hasText)
+                        .toList(),
+                response.runtime(),
+                response.credits() == null || response.credits().cast() == null ? List.of()
+                        : response.credits().cast().stream().limit(12).map(member -> new MovieCastMember(
+                                member.id(), member.name(), member.character(), member.profilePath())).toList(),
+                response.credits() == null || response.credits().crew() == null ? List.of()
+                        : response.credits().crew().stream()
+                                .filter(member -> "Directing".equals(member.department()) || "Writing".equals(member.department()))
+                                .map(member -> new MovieCrewMember(member.id(), member.name(), member.job(),
+                                        member.department(), member.profilePath()))
+                                .toList()
         );
     }
 

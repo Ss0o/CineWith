@@ -241,7 +241,7 @@ Comment Repository Test는 같은 PostgreSQL 환경에서 Member·Review FK와 �
 `TmdbMovieClientTests`는 `MockRestServiceServer`를 사용해 실제 TMDB 네트워크와 Token 없이 실행한다.
 
 - 검색 JSON을 `MovieSummary`로 매핑한다.
-- 상세 JSON을 별도 `MovieDetail`로 매핑한다.
+- 상세 JSON과 `append_to_response=credits` 응답을 별도 `MovieDetail`로 매핑하며, 장르·제작 국가·상영 시간·출연진·연출/각본 제작진을 검증한다.
 - 추천 JSON을 `MovieSummary` 목록으로 매핑한다.
 - `Authorization: Bearer fake-test-token` Header를 검증한다.
 - 빈 `release_date`를 `null`로 매핑한다.
