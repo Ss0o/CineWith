@@ -1,32 +1,41 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BoardShell from '../components/layout/BoardShell.vue'
+import MovieCarousel from '../components/MovieCarousel.vue'
 import PosterThumb from '../components/PosterThumb.vue'
 import { dataService } from '../data'
 
 const route = useRoute()
 const router = useRouter()
-const query = ref('')
 const movies = ref([])
 const home = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 let loadVersion = 0
 
-async function search() {
-  const normalizedQuery = query.value.trim()
-  await router.push(normalizedQuery ? { path: '/', query: { q: normalizedQuery } } : { path: '/' })
+const sectionMeta = {
+  nowPlayingRecommendations: { id: 'now-playing', title: '🔥 추천 현재 상영작', description: 'TMDB 인기도 기준' },
+  recommendedMovies: { id: 'recommended-movies', title: '⭐ 추천 영화', description: 'TMDB 평점·평가 수·인기도 기준' },
+  upcomingRecommendations: { id: 'upcoming-movies', title: '🎞 앞으로 나올 기대작', description: 'TMDB 인기도와 개봉일 기준' },
+  action: { id: 'genre-action', title: '🎬 액션', description: '취향별 인기 영화' },
+  adventure: { id: 'genre-adventure', title: '🎬 모험', description: '취향별 인기 영화' },
+  animation: { id: 'genre-animation', title: '🎬 애니메이션', description: '취향별 인기 영화' },
+  comedy: { id: 'genre-comedy', title: '🎬 코미디', description: '취향별 인기 영화' },
+  drama: { id: 'genre-drama', title: '🎬 드라마', description: '취향별 인기 영화' },
+  fantasy: { id: 'genre-fantasy', title: '🎬 판타지', description: '취향별 인기 영화' },
+  horror: { id: 'genre-horror', title: '🎬 공포', description: '취향별 인기 영화' },
+  romance: { id: 'genre-romance', title: '🎬 로맨스', description: '취향별 인기 영화' },
+  sf: { id: 'genre-sf', title: '🎬 SF', description: '취향별 인기 영화' },
+  thriller: { id: 'genre-thriller', title: '🎬 스릴러', description: '취향별 인기 영화' },
 }
 
 async function clearSearch() {
-  query.value = ''
-  await search()
+  await router.push({ path: '/' })
 }
 
 async function loadMovies(routeQuery) {
   const normalizedQuery = typeof routeQuery === 'string' ? routeQuery.trim() : ''
-  query.value = normalizedQuery
   const request = ++loadVersion
   loading.value = true
   errorMessage.value = ''
@@ -36,7 +45,12 @@ async function loadMovies(routeQuery) {
       if (request === loadVersion) { movies.value = result; home.value = null }
     } else {
       const result = await dataService.movies.discoveryHome()
-      if (request === loadVersion) { home.value = result; movies.value = [] }
+      if (request === loadVersion) {
+        home.value = result
+        movies.value = []
+        await nextTick()
+        if (route.hash) document.querySelector(route.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     }
   } catch (error) {
     if (request !== loadVersion) return
@@ -51,33 +65,25 @@ watch(() => route.query.q, loadMovies, { immediate: true })
 </script>
 
 <template>
-  <BoardShell has-right-rail>
+  <BoardShell>
     <div style="flex: 1; min-width: 0; padding: 24px 26px; display: flex; flex-direction: column; gap: 18px">
-      <div>
-        <h3 style="margin: 0 0 5px">{{ route.query.q ? '영화 검색 결과' : 'CINEWITH' }}</h3>
-        <div style="font: 400 12.5px/1.5 var(--font-body); color: color-mix(in srgb, var(--color-text) 48%, transparent)">{{ route.query.q ? '검색한 영화를 확인하세요.' : '지금 볼 영화와 다음 기대작을 찾아보세요.' }}</div>
+      <div v-if="route.query.q" style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <div>
+          <h3 style="margin: 0 0 5px">영화 검색 결과</h3>
+          <div style="font: 400 12.5px/1.5 var(--font-body); color: color-mix(in srgb, var(--color-text) 48%, transparent)">검색한 영화를 확인하세요.</div>
+        </div>
+        <button class="btn btn-secondary" :disabled="loading" @click="clearSearch">검색 초기화</button>
       </div>
-      <div style="display: flex; gap: 8px; max-width: 620px">
-        <input class="input" v-model="query" placeholder="영화 제목을 입력하세요" @keyup.enter="search" />
-        <button class="btn btn-primary" :disabled="loading" @click="search"><i class="ph ph-magnifying-glass" style="font-size: 15px"></i>{{ loading ? '불러오는 중' : '검색' }}</button>
-        <button v-if="route.query.q" class="btn btn-secondary" :disabled="loading" @click="clearSearch">검색 초기화</button>
-      </div>
-      <div class="fade-rule" style="margin: 0 -26px"></div>
       <div v-if="errorMessage" class="card" style="color: var(--color-danger, #d66)">{{ errorMessage }} <button class="btn btn-secondary" @click="loadMovies(route.query.q)">다시 불러오기</button></div>
       <div v-else-if="loading" style="padding: 42px 0; text-align: center; color: color-mix(in srgb, var(--color-text) 48%, transparent)">영화를 불러오는 중입니다.</div>
       <div v-else-if="route.query.q && !movies.length" style="padding: 42px 0; text-align: center; color: color-mix(in srgb, var(--color-text) 48%, transparent)">검색 결과가 없습니다.</div>
       <div v-else-if="!route.query.q && home" style="display: grid; gap: 30px">
-        <template v-for="(section, key) in { nowPlayingRecommendations: home.nowPlayingRecommendations, recommendedMovies: home.recommendedMovies, upcomingRecommendations: home.upcomingRecommendations, ...home.genres }" :key="key">
-          <section>
-            <h4 style="margin: 0 0 4px">{{ { nowPlayingRecommendations: '🔥 추천 현재 상영작', recommendedMovies: '⭐ 추천 영화', upcomingRecommendations: '🎞 앞으로 나올 기대작', action: '🎬 액션', comedy: '🎬 코미디', romance: '🎬 로맨스', horror: '🎬 공포', sf: '🎬 SF' }[key] }}</h4>
-            <p class="meta" style="margin: 0 0 12px">{{ key === 'nowPlayingRecommendations' ? 'TMDB 인기도 기준' : key === 'upcomingRecommendations' ? 'TMDB 인기도와 개봉일 기준' : key === 'recommendedMovies' ? 'TMDB 평점·평가 수·인기도 기준' : '취향별 인기 영화' }}</p>
+        <template v-for="(section, key) in { nowPlayingRecommendations: home.nowPlayingRecommendations, recommendedMovies: home.recommendedMovies, upcomingRecommendations: home.upcomingRecommendations }" :key="key">
+          <section :id="sectionMeta[key].id" style="scroll-margin-top: 16px">
+            <h4 style="margin: 0 0 4px">{{ sectionMeta[key].title }}</h4>
+            <p class="meta" style="margin: 0 0 12px">{{ sectionMeta[key].description }}</p>
             <p v-if="section.status === 'UNAVAILABLE'" class="meta">현재 이 섹션의 영화 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
-            <div v-else-if="section.movies.length" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px">
-              <RouterLink v-for="movie in section.movies" :key="movie.tmdbId" :to="`/movies/${movie.tmdbId}`" class="card" style="color:var(--color-text); gap:8px">
-                <PosterThumb width="100%" height="176px" :label="movie.title" :poster-path="movie.posterPath" />
-                <strong style="font-size:13px">{{ movie.title }}</strong><span class="meta">{{ movie.releaseDate || '개봉일 미정' }}</span>
-              </RouterLink>
-            </div>
+            <MovieCarousel v-else-if="section.movies.length" :movies="section.movies" :label="sectionMeta[key].title" />
             <p v-else class="meta">표시할 영화가 없습니다.</p>
           </section>
         </template>
@@ -91,15 +97,5 @@ watch(() => route.query.q, loadMovies, { immediate: true })
         </RouterLink>
       </div>
     </div>
-    <template #right-rail>
-      <div class="h6" style="margin-bottom: 12px">이용 방법</div>
-      <div style="display: flex; flex-direction: column; gap: 12px; font: 400 12.5px/1.65 var(--font-body); color: color-mix(in srgb, var(--color-text) 62%, transparent)">
-        <div><span style="color: var(--color-accent)">01</span> TMDB 영화 제목을 검색합니다.</div>
-        <div><span style="color: var(--color-accent)">02</span> 영화 상세에서 최신 리뷰를 확인합니다.</div>
-        <div><span style="color: var(--color-accent)">03</span> 로그인 후 리뷰와 댓글을 작성합니다.</div>
-      </div>
-      <div class="fade-rule" style="margin: 24px -20px"></div>
-      <RouterLink to="/reviews/new" class="btn btn-primary" style="justify-content: center">리뷰 작성하기</RouterLink>
-    </template>
   </BoardShell>
 </template>

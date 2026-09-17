@@ -111,6 +111,18 @@ test('loads the review feed with its search query and preserves card fields', as
   assert.equal(feed.content[0].body[0].text, 'Preview')
 })
 
+test('loads a selected discovery section as a paged movie grid', async () => {
+  const urls = []
+  globalThis.fetch = async (url) => {
+    urls.push(url)
+    return json({ content: [{ tmdbId: 550, title: 'Movie', posterPath: '/poster.jpg', releaseDate: '2026-09-01' }], page: 1, size: 20, totalElements: 43, totalPages: 3 })
+  }
+  const result = await apiProvider.movies.discoveryPage('now-playing', 1)
+  assert.deepEqual(urls, ['/api/movies/discovery/now-playing?page=1'])
+  assert.equal(result.content[0].id, 550)
+  assert.equal(result.totalPages, 3)
+})
+
 test('resets the feed to page zero when a new search starts and ignores its old response', async () => {
   const old = deferred()
   let query = 'old'

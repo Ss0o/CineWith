@@ -2,6 +2,7 @@ package com.community.board.movie.discovery;
 import com.community.board.movie.client.MovieClient;
 import com.community.board.movie.client.model.DiscoveryMovie;
 import com.community.board.movie.client.model.MovieCategory;
+import com.community.board.movie.client.model.DiscoveryMoviePage;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,25 @@ public class MovieDiscoveryService {
                     () -> movieClient.getByCategory(category).stream().limit(8).toList()));
         }
         return new DiscoveryHome(nowPlaying, recommended, upcoming, genres);
+    }
+
+    public DiscoveryPage getPage(String section, int page) {
+        DiscoveryMoviePage result = switch (section) {
+            case "recommended" -> movieClient.getTopRatedPage(page + 1);
+            case "now-playing" -> movieClient.getNowPlayingDiscoveryPage(page + 1);
+            case "upcoming" -> movieClient.getUpcomingPage(page + 1);
+            default -> movieClient.getByCategoryPage(MovieCategory.fromKey(section), page + 1);
+        };
+        List<DiscoveryMovie> movies = switch (section) {
+            case "recommended" -> rankingPolicy.rank(result.movies());
+            case "now-playing" -> popularityPolicy.rank(result.movies(), false);
+            case "upcoming" -> popularityPolicy.rank(result.movies().stream()
+                    .filter(movie -> movie.releaseDate() != null && movie.releaseDate().isAfter(LocalDate.now(clock)))
+                    .toList(), true);
+            default -> result.movies();
+        };
+        List<MovieDiscoveryView> content = movies.stream().map(MovieDiscoveryView::from).toList();
+        return new DiscoveryPage(content, page, 20, result.totalResults(), result.totalPages());
     }
 
     private DiscoverySection popularitySection(Source source, boolean upcoming) {

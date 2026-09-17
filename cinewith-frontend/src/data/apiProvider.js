@@ -30,6 +30,10 @@ export const apiProvider = {
   },
   movies: {
     async discoveryHome() { return apiRequest('/api/movies/discovery/home') },
+    async discoveryPage(section, page = 0) {
+      const result = await apiRequest(`/api/movies/discovery/${section}?page=${page}`)
+      return { ...result, content: result.content.map(movieView) }
+    },
     async ratingStatistics(id) { return apiRequest(`/api/movies/${id}/rating-statistics`) },
     async nowPlaying() { return (await apiRequest('/api/movies/now-playing')).map(movieView) },
     async search(query) { return (await apiRequest(`/api/movies/search?query=${encodeURIComponent(query)}`)).map(movieView) },
