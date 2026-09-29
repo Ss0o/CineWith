@@ -8,6 +8,7 @@ import com.community.board.member.service.MemberNotFoundException;
 import com.community.board.review.domain.Review;
 import com.community.board.review.repository.ReviewRepository;
 import com.community.board.review.service.ReviewNotFoundException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,16 @@ public class CommentService {
                 commentRepository.findByReviewId(reviewId, pageRequest).map(CommentView::from)
         );
     }
+    @Transactional(readOnly = true)
+    public MemberCommentPage getMyComments(Long memberId, int page, int size) {
+        getMember(memberId);
+        Page<MemberCommentItem> comments = commentRepository.findActivityByMemberId(
+                memberId,
+                PageRequest.of(page, size)
+        );
+        return MemberCommentPage.from(comments);
+    }
+
 
     @Transactional
     public CommentView update(Long memberId, Long commentId, String content) {

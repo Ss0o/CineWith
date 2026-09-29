@@ -436,6 +436,64 @@ class ReviewControllerTests {
                 .andExpect(jsonPath("$.code").value("REVIEW_FORBIDDEN"));
     }
 
+    @Test
+    void returnsOnlyCurrentMembersReviewsWithPagination() throws Exception {
+        Member currentMember = saveMember("my-activity-review", "myReviewer");
+        Member otherMember = saveMember("other-activity-review", "otherReviewer");
+        Review first = saveReview(currentMember, 810L);
+        Review second = saveReview(currentMember, 811L);
+        saveReview(otherMember, 812L);
+
+        mockMvc.perform(get("/api/members/me/reviews?size=1")
+                        .with(authentication(oauthAuthentication(memberPrincipal(currentMember)))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].reviewId").value(second.getId()))
+                .andExpect(jsonPath("$.content[0].authorNickname").value("myReviewer"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2));
+
+        assertThat(first.getMember().getId()).isEqualTo(currentMember.getId());
+    }
+
+    @Test
+    void returnsOnlyCurrentMembersCommentsWithReviewAndMovieLinks() throws Exception {
+        Member currentMember = saveMember("my-activity-comment", "myCommenter");
+        Member otherMember = saveMember("other-activity-comment", "otherCommenter");
+        Review review = saveReview(otherMember, 813L);
+        Comment currentComment = commentRepository.saveAndFlush(Comment.create(currentMember, review, "내 댓글"));
+        commentRepository.saveAndFlush(Comment.create(otherMember, review, "다른 댓글"));
+
+        mockMvc.perform(get("/api/members/me/comments")
+                        .with(authentication(oauthAuthentication(memberPrincipal(currentMember)))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].commentId").value(currentComment.getId()))
+                .andExpect(jsonPath("$.content[0].reviewId").value(review.getId()))
+                .andExpect(jsonPath("$.content[0].tmdbId").value(813L))
+                .andExpect(jsonPath("$.content[0].movieTitle").value("Movie 813"))
+                .andExpect(jsonPath("$.content[0].reviewTitle").value("Title"))
+                .andExpect(jsonPath("$.content[0].content").value("내 댓글"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void protectsMemberActivityEndpointsByAuthenticationState() throws Exception {
+        mockMvc.perform(get("/api/members/me/reviews"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+
+        CommunityOidcPrincipal signupRequired = CommunityOidcPrincipal.signupRequired(
+                oidcUser("signup-required-activity", "activity@example.com")
+        );
+        mockMvc.perform(get("/api/members/me/comments")
+                        .with(authentication(oauthAuthentication(signupRequired))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
     private String validCreateRequest(Long tmdbId) {
         return createRequest(tmdbId, "4.5");
     }

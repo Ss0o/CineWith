@@ -55,6 +55,19 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     )
     Page<ReviewFeedItem> searchFeed(@Param("query") String query, Pageable pageable);
 
+    @Query(value = """
+                    select new com.community.board.review.service.ReviewFeedItem(
+                        r.id, m.tmdbId, m.title, m.posterPath, member.nickname,
+                        r.rating, r.title, r.content, r.createdAt
+                    )
+                    from Review r
+                    join r.movie m
+                    join r.member member
+                    where member.id = :memberId
+                    order by r.createdAt desc, r.id desc
+                    """, countQuery = "select count(r.id) from Review r where r.member.id = :memberId")
+    Page<ReviewFeedItem> findFeedByMemberId(@Param("memberId") Long memberId, Pageable pageable);
+
     @Query("""
             select avg(r.rating) as averageRating, count(r.id) as reviewCount
             from Review r

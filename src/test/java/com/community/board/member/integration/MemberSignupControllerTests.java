@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +46,39 @@ class MemberSignupControllerTests {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Test
+    void returnsActualGoogleEmailForSignupRequiredUser() throws Exception {
+        CommunityOidcPrincipal principal = signupRequiredPrincipal(
+                "signup-context-sub",
+                "actual-user@example.com"
+        );
+
+        mockMvc.perform(get("/api/members/signup-context")
+                        .with(authentication(new OAuth2AuthenticationToken(
+                                principal, principal.getAuthorities(), "google"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("GOOGLE"))
+                .andExpect(jsonPath("$.email").value("actual-user@example.com"))
+                .andExpect(jsonPath("$.providerId").doesNotExist())
+                .andExpect(jsonPath("$.memberId").doesNotExist());
+    }
+
+    @Test
+    void protectsSignupContextByAuthenticationState() throws Exception {
+        mockMvc.perform(get("/api/members/signup-context"))
+                .andExpect(status().isUnauthorized());
+
+        Member member = memberRepository.saveAndFlush(
+                Member.create(OAuthProvider.GOOGLE, "context-member-sub", "member@example.com", "contextMember")
+        );
+        mockMvc.perform(get("/api/members/signup-context")
+                        .with(authentication(new OAuth2AuthenticationToken(
+                                memberPrincipal(member), memberPrincipal(member).getAuthorities(), "google"
+                        ))))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     void signupRequiredUserCreatesMemberAndBecomesMemberInSession() throws Exception {

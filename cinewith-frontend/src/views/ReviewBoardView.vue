@@ -15,19 +15,19 @@ const errorMessage = ref('')
 let loadVersion = 0
 
 const sectionMeta = {
-  nowPlayingRecommendations: { id: 'now-playing', title: '🔥 추천 현재 상영작', description: 'TMDB 인기도 기준' },
-  recommendedMovies: { id: 'recommended-movies', title: '⭐ 추천 영화', description: 'TMDB 평점·평가 수·인기도 기준' },
-  upcomingRecommendations: { id: 'upcoming-movies', title: '🎞 앞으로 나올 기대작', description: 'TMDB 인기도와 개봉일 기준' },
-  action: { id: 'genre-action', title: '🎬 액션', description: '취향별 인기 영화' },
-  adventure: { id: 'genre-adventure', title: '🎬 모험', description: '취향별 인기 영화' },
-  animation: { id: 'genre-animation', title: '🎬 애니메이션', description: '취향별 인기 영화' },
-  comedy: { id: 'genre-comedy', title: '🎬 코미디', description: '취향별 인기 영화' },
-  drama: { id: 'genre-drama', title: '🎬 드라마', description: '취향별 인기 영화' },
-  fantasy: { id: 'genre-fantasy', title: '🎬 판타지', description: '취향별 인기 영화' },
-  horror: { id: 'genre-horror', title: '🎬 공포', description: '취향별 인기 영화' },
-  romance: { id: 'genre-romance', title: '🎬 로맨스', description: '취향별 인기 영화' },
-  sf: { id: 'genre-sf', title: '🎬 SF', description: '취향별 인기 영화' },
-  thriller: { id: 'genre-thriller', title: '🎬 스릴러', description: '취향별 인기 영화' },
+  nowPlayingRecommendations: { id: 'now-playing', title: '🔥 추천 현재 상영작' },
+  recommendedMovies: { id: 'recommended-movies', title: '⭐ 추천 영화' },
+  upcomingRecommendations: { id: 'upcoming-movies', title: '🎞 앞으로 나올 기대작' },
+  action: { id: 'genre-action', title: '🎬 액션' },
+  adventure: { id: 'genre-adventure', title: '🎬 모험' },
+  animation: { id: 'genre-animation', title: '🎬 애니메이션' },
+  comedy: { id: 'genre-comedy', title: '🎬 코미디' },
+  drama: { id: 'genre-drama', title: '🎬 드라마' },
+  fantasy: { id: 'genre-fantasy', title: '🎬 판타지' },
+  horror: { id: 'genre-horror', title: '🎬 공포' },
+  romance: { id: 'genre-romance', title: '🎬 로맨스' },
+  sf: { id: 'genre-sf', title: '🎬 SF' },
+  thriller: { id: 'genre-thriller', title: '🎬 스릴러' },
 }
 
 async function clearSearch() {
@@ -80,8 +80,7 @@ watch(() => route.query.q, loadMovies, { immediate: true })
       <div v-else-if="!route.query.q && home" style="display: grid; gap: 30px">
         <template v-for="(section, key) in { nowPlayingRecommendations: home.nowPlayingRecommendations, recommendedMovies: home.recommendedMovies, upcomingRecommendations: home.upcomingRecommendations }" :key="key">
           <section :id="sectionMeta[key].id" style="scroll-margin-top: 16px">
-            <h4 style="margin: 0 0 4px">{{ sectionMeta[key].title }}</h4>
-            <p class="meta" style="margin: 0 0 12px">{{ sectionMeta[key].description }}</p>
+            <h4 style="margin: 0 0 12px">{{ sectionMeta[key].title }}</h4>
             <p v-if="section.status === 'UNAVAILABLE'" class="meta">현재 이 섹션의 영화 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
             <MovieCarousel v-else-if="section.movies.length" :movies="section.movies" :label="sectionMeta[key].title" />
             <p v-else class="meta">표시할 영화가 없습니다.</p>

@@ -363,3 +363,7 @@ Frontend `tests/RatingStatisticsTests.js`는 통계 URL/응답, null 보존, 로
 제목·본문·영화 제목 검색, 대소문자/앞뒤 공백, 불일치 결과, 빈 검색어, 100자 초과/잘못된 페이지 크기도 검증한다. StatementInspector는 content query와 count query가 두 개이고 Member/Movie JOIN으로 필요한 scalar 값을 같이 선택해 목록 크기에 비례한 Member/Movie SQL이 생기지 않음을 확인한다. 검색 content/count query의 lower/LIKE/OR와 MovieClient/TMDB 미호출도 확인한다.
 
 Frontend는 `apiProvider.reviews.listFeed`의 URL·page/query 전달, `usePagedList`의 검색 변경 reset 및 오래된 응답 무시, 로딩·오류/재시도·빈 결과·페이지 이동을 Node 테스트로 검증한다.
+
+## 마이페이지 활동 내역 테스트 (4단계)
+
+마이페이지 Controller 통합 테스트는 MEMBER 자신의 리뷰·댓글만 최신순과 안정된 보조 ID 순서로 반환하고, 페이지 메타데이터 및 리뷰·영화 연결 필드를 검증한다. ANONYMOUS는 401, SIGNUP_REQUIRED는 403이며 요청이 다른 회원 ID를 받을 수 없음을 확인한다. Frontend는 두 API URL과 카드에 필요한 필드·페이지 메타데이터의 전달을 Node 테스트로 검증한다.
