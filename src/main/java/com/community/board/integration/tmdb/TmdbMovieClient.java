@@ -15,6 +15,7 @@ import com.community.board.movie.client.model.MovieCrewMember;
 import com.community.board.movie.client.model.MovieSummary;
 import com.community.board.movie.client.model.DiscoveryMovie;
 import com.community.board.movie.client.model.MovieCategory;
+import com.community.board.movie.client.model.DiscoveryMoviePage;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -125,25 +126,33 @@ public class TmdbMovieClient implements MovieClient {
         return response.results().stream().map(this::toSummary).toList();
     }
 
-    @Override public List<DiscoveryMovie> getTopRated() { return getDiscovery("/3/movie/top_rated", null); }
-    @Override public List<DiscoveryMovie> getNowPlayingDiscovery() { return getDiscovery("/3/movie/now_playing", null); }
-    @Override public List<DiscoveryMovie> getUpcoming() { return getDiscovery("/3/movie/upcoming", null); }
+    @Override public List<DiscoveryMovie> getTopRated() { return getTopRatedPage(1).movies(); }
+    @Override public List<DiscoveryMovie> getNowPlayingDiscovery() { return getNowPlayingDiscoveryPage(1).movies(); }
+    @Override public List<DiscoveryMovie> getUpcoming() { return getUpcomingPage(1).movies(); }
     @Override public List<DiscoveryMovie> getByCategory(MovieCategory category) {
-        return getDiscovery("/3/discover/movie", category.tmdbGenreId());
+        return getByCategoryPage(category, 1).movies();
     }
+    @Override public DiscoveryMoviePage getTopRatedPage(int page) { return getDiscoveryPage("/3/movie/top_rated", null, page); }
+    @Override public DiscoveryMoviePage getNowPlayingDiscoveryPage(int page) { return getDiscoveryPage("/3/movie/now_playing", null, page); }
+    @Override public DiscoveryMoviePage getUpcomingPage(int page) { return getDiscoveryPage("/3/movie/upcoming", null, page); }
+    @Override public DiscoveryMoviePage getByCategoryPage(MovieCategory category, int page) { return getDiscoveryPage("/3/discover/movie", category.tmdbGenreId(), page); }
 
-    private List<DiscoveryMovie> getDiscovery(String path, Integer genreId) {
+    private DiscoveryMoviePage getDiscoveryPage(String path, Integer genreId, int page) {
         TmdbMovieResultsResponse response = execute(() -> restClient.get().uri(builder -> {
             UriBuilder result = addLanguageAndRegion(builder.path(path));
             if (genreId != null) result = result.queryParam("with_genres", genreId).queryParam("sort_by", "popularity.desc");
+            result = result.queryParam("page", page);
             return result.build();
         }).retrieve().onStatus(status -> status.value() == 401 || status.value() == 403,
                 (request, result) -> { throw new MovieClientAuthenticationException(); })
                 .onStatus(HttpStatusCode::is5xxServerError, (request, result) -> { throw new MovieClientUnavailableException(); })
                 .requiredBody(TmdbMovieResultsResponse.class));
-        return response.results().stream().map(result -> new DiscoveryMovie(result.id(), result.title(), result.posterPath(),
+        List<DiscoveryMovie> movies = response.results().stream().map(result -> new DiscoveryMovie(result.id(), result.title(), result.posterPath(),
                 parseReleaseDate(result.releaseDate()), result.voteAverage() == null ? 0 : result.voteAverage(),
                 result.voteCount() == null ? 0 : result.voteCount(), result.popularity() == null ? 0 : result.popularity())).toList();
+        return new DiscoveryMoviePage(movies, response.page() == null ? page : response.page(),
+                response.totalResults() == null ? movies.size() : response.totalResults(),
+                response.totalPages() == null ? 1 : response.totalPages());
     }
 
     private UriBuilder addSearchParameters(UriBuilder uriBuilder, String query) {

@@ -1,14 +1,16 @@
 <script setup>
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import TopNav from '../components/layout/TopNav.vue'
+import AppHeader from '../components/layout/AppHeader.vue'
+import MovieCarousel from '../components/MovieCarousel.vue'
+import PersonCarousel from '../components/PersonCarousel.vue'
 import PosterThumb from '../components/PosterThumb.vue'
-import StarRating from '../components/StarRating.vue'
+import ReviewCarousel from '../components/ReviewCarousel.vue'
 import PaginationControls from '../components/PaginationControls.vue'
 import MovieRatingStatistics from '../components/MovieRatingStatistics.vue'
 import { usePagedList } from '../composables/usePagedList'
 import { dataService } from '../data'
-import { tmdbBackdropUrl, tmdbImageUrl } from '../utils/tmdbImage'
+import { tmdbBackdropUrl } from '../utils/tmdbImage'
 
 const props = defineProps({ id: { type: String, required: true } })
 const router = useRouter()
@@ -72,7 +74,6 @@ function audienceLabel(value) {
   if (audience >= 10000) return `${(audience / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만 명`
   return `${audience.toLocaleString('ko-KR')}명`
 }
-function profileUrl(profilePath) { return tmdbImageUrl(profilePath, 'w185') }
 watch(() => props.id, (id) => {
   const request = ++version
   movie.value = null
@@ -88,7 +89,7 @@ onBeforeUnmount(() => { version++; reviews.reset() })
 </script>
 
 <template>
-  <TopNav />
+  <AppHeader />
   <main class="movie-detail">
     <button class="btn btn-ghost back-button" @click="router.back()">← 이전 화면</button>
     <p v-if="loading" role="status">영화를 불러오는 중입니다.</p>
@@ -119,13 +120,7 @@ onBeforeUnmount(() => { version++; reviews.reset() })
           </section>
           <section v-if="movie.cast.length" class="detail-section">
             <div class="section-heading"><h2>출연</h2><span>{{ movie.cast.length }}명</span></div>
-            <div class="people-grid">
-              <article v-for="person in movie.cast" :key="`${person.personId}-${person.character}`" class="person-card">
-                <img v-if="profileUrl(person.profilePath)" :src="profileUrl(person.profilePath)" :alt="`${person.name} 프로필`" loading="lazy" @error="$event.target.remove()" />
-                <span v-else class="person-placeholder" aria-hidden="true">{{ person.name?.slice(0, 1) || '?' }}</span>
-                <strong>{{ person.name }}</strong><span>{{ person.character || '배역 정보 없음' }}</span>
-              </article>
-            </div>
+            <PersonCarousel :people="movie.cast" />
           </section>
           <section v-if="movie.crew.length" class="detail-section">
             <h2>제작진</h2>
@@ -138,10 +133,7 @@ onBeforeUnmount(() => { version++; reviews.reset() })
             <div v-else-if="reviews.state.error" role="alert"><p>{{ reviews.state.error }}</p><button class="btn btn-secondary" @click="reviews.load()">리뷰 다시 불러오기</button></div>
             <template v-else>
               <p v-if="!reviews.state.content.length" class="meta">아직 작성된 리뷰가 없습니다.</p>
-              <RouterLink v-for="review in reviews.state.content" :key="review.id" :to="`/reviews/${review.id}`" class="review-item">
-                <div><h3>{{ review.title }}</h3><p class="excerpt">{{ review.excerpt }}</p></div>
-                <div class="review-meta"><StarRating :rating="review.rating" /><span>{{ review.author.nickname }} · {{ review.createdAtLabel }}</span></div>
-              </RouterLink>
+              <ReviewCarousel v-else :reviews="reviews.state.content" />
             </template>
             <PaginationControls :page="reviews.state.page" :total-pages="reviews.state.totalPages" :loading="reviews.state.loading" label="리뷰" @change="reviews.load" />
           </section>
@@ -151,12 +143,7 @@ onBeforeUnmount(() => { version++; reviews.reset() })
             <p v-if="recommendationsLoading" role="status">추천 영화를 불러오는 중입니다.</p>
             <div v-else-if="recommendationsError" role="alert"><p>{{ recommendationsError }}</p><button class="btn btn-secondary" @click="loadRecommendations()">추천 다시 불러오기</button></div>
             <p v-else-if="!recommendations.length" class="meta">추천 영화가 없습니다.</p>
-            <div v-else class="movie-grid">
-              <RouterLink v-for="item in recommendations" :key="item.id" :to="`/movies/${item.id}`" class="similar-card">
-                <PosterThumb width="100%" height="190px" :label="item.title" :poster-path="item.posterPath" />
-                <strong>{{ item.title }}</strong><span>{{ item.releaseDate?.slice(0, 4) || '개봉일 미정' }}</span>
-              </RouterLink>
-            </div>
+            <MovieCarousel v-else :movies="recommendations" label="비슷한 영화" />
           </section>
         </div>
 
@@ -190,9 +177,21 @@ onBeforeUnmount(() => { version++; reviews.reset() })
 .movie-detail { max-width: 1180px; margin: 0 auto; padding: 20px 24px 64px; }.back-button { margin-bottom: 14px; }
 .movie-hero { position: relative; isolation: isolate; overflow: hidden; width: 100vw; min-height: 520px; margin-left: calc(50% - 50vw); padding: 66px max(24px, calc((100vw - 1120px) / 2)); background: linear-gradient(125deg, var(--color-accent-900), var(--color-surface)); }.hero-backdrop, .hero-scrim { position: absolute; inset: 0; width: 100%; height: 100%; }.hero-backdrop { object-fit: cover; object-position: center; opacity: .84; z-index: -2; }.hero-scrim { z-index: -1; background: linear-gradient(90deg, rgba(12,14,24,.98) 0%, rgba(12,14,24,.9) 35%, rgba(12,14,24,.56) 67%, rgba(12,14,24,.3) 100%); }.hero-content { display: flex; align-items: flex-end; gap: 34px; min-height: 388px; }.hero-poster { box-shadow: 0 16px 44px rgba(0, 0, 0, .65); }.hero-copy { max-width: 720px; text-shadow: 0 2px 18px rgba(0, 0, 0, .72); }.eyebrow { margin: 0 0 10px; color: #d8d2ff; font-size: 13px; font-weight: 700; letter-spacing: .14em; }.hero-copy h1 { margin: 0; color: #fff; font-size: clamp(42px, 5vw, 64px); font-weight: 700; }.original-title { margin: 10px 0 0; color: #f1efff; font-size: 21px; }.facts { margin: 18px 0 24px; color: #fff; font-size: 18px; font-weight: 500; }.review-action { padding: 12px 18px; color: #fff; border-color: #d6d0ff; background: rgba(20, 20, 34, .7); }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 48px; margin-top: 46px; }.detail-main { min-width: 0; }.detail-section { padding: 0 0 38px; margin-bottom: 38px; border-bottom: 1px solid var(--color-divider); }.detail-section h2 { color: #fff; font-size: 27px; font-weight: 650; margin: 0; }.section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 20px; }.section-heading span, .similar-card span, .crew-list span, .person-card span, .aside-copy, .as-of { color: var(--color-neutral-300); font-size: 15px; }.synopsis p { margin: 0; white-space: pre-wrap; color: #f3f4fa; font-size: 17px; line-height: 1.9; }
-.people-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }.person-card { display: grid; min-width: 0; gap: 5px; }.person-card img, .person-placeholder { width: 100%; aspect-ratio: .82; margin-bottom: 7px; border-radius: var(--radius-md); background: var(--color-neutral-800); object-fit: cover; }.person-placeholder { display: grid; place-items: center; color: var(--color-neutral-300); font-size: 32px; }.person-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 16px; }.person-card span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.crew-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; padding: 0; margin: 20px 0 0; list-style: none; }.crew-list li { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--color-divider) 70%, transparent); color: #fff; font-size: 16px; }.crew-list span { text-align: right; }
+.crew-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; padding: 0; margin: 20px 0 0; list-style: none; }.crew-list li { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--color-divider) 70%, transparent); color: #fff; font-size: 16px; }.crew-list span { text-align: right; }
 .detail-aside { display: grid; align-content: start; gap: 20px; }.theatrical-info { padding: 24px; border: 1px solid color-mix(in srgb, var(--color-divider) 150%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-surface) 85%, #000); }.theatrical-info p { margin-bottom: 11px; }.theatrical-title { color: #fff; font-size: 17px; font-weight: 650; }.theatrical-title span { color: var(--color-neutral-200); font-weight: 400; }.aside-copy { color: var(--color-neutral-200); font-size: 15px; line-height: 1.65; }.box-office { color: #e4dfff; font-size: 15px; line-height: 1.75; }.as-of { margin-bottom: 0 !important; font-size: 13px; }
 .review-item { display: flex; justify-content: space-between; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--color-divider); color: var(--color-text); }.review-item h3 { color: #fff; font-size: 18px; }.excerpt { margin: 7px 0 0; color: var(--color-neutral-200); font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }.review-meta { flex: none; display: grid; align-content: start; justify-items: end; gap: 7px; color: var(--color-neutral-300); font-size: 14px; }.similar-section { border-bottom: 0; margin-bottom: 0; }.movie-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }.similar-card { display: grid; gap: 7px; min-width: 0; color: var(--color-text); }.similar-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 16px; }
 :deep(.rating-statistics) { padding: 24px; border: 1px solid color-mix(in srgb, var(--color-divider) 150%, transparent); background: color-mix(in srgb, var(--color-surface) 85%, #000); }:deep(.rating-statistics h4) { color: #fff; font-size: 22px; }:deep(.rating-statistics .meta) { color: var(--color-neutral-300); font-size: 14px; }:deep(.rating-summary strong) { font-size: 24px; }
-@media (max-width: 900px) { .movie-hero { min-height: 460px; padding: 52px 24px; }.detail-layout { grid-template-columns: 1fr; }.detail-aside { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }.movie-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } } @media (max-width: 620px) { .movie-detail { padding: 14px 16px 44px; }.movie-hero { min-height: 390px; padding: 34px 20px; }.hero-scrim { background: linear-gradient(90deg, rgba(12,14,24,.96), rgba(12,14,24,.7)); }.hero-content { align-items: flex-end; gap: 16px; min-height: 0; }.hero-poster { width: 126px !important; height: 186px !important; }.hero-copy h1 { font-size: 34px; }.original-title { font-size: 16px; }.facts { margin: 11px 0 17px; font-size: 15px; }.detail-layout { gap: 26px; margin-top: 30px; }.detail-aside { grid-template-columns: 1fr; }.people-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.crew-list { grid-template-columns: 1fr; }.movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.review-item { display: grid; gap: 10px; }.review-meta { justify-items: start; }.detail-section { padding-bottom: 28px; margin-bottom: 28px; }.detail-section h2 { font-size: 24px; }.synopsis p { font-size: 16px; } }
+/* The hero stays dark for its backdrop image; the detail content follows the light application theme. */
+.detail-section h2, .person-card strong, .crew-list li, .theatrical-title, .review-item h3, .similar-card strong { color: var(--color-text); }
+.section-heading span, .similar-card span, .crew-list span, .person-card span, .aside-copy, .as-of, .review-meta { color: var(--color-neutral-600); }
+.synopsis p { color: var(--color-text); }
+.person-card img, .person-placeholder { background: var(--color-neutral-200); }
+.person-placeholder { color: var(--color-neutral-600); }
+.theatrical-info, :deep(.rating-statistics) { border-color: var(--color-divider); background: var(--color-surface); }
+.theatrical-title span, .aside-copy { color: var(--color-neutral-600); }
+.box-office { color: var(--color-accent-700); }
+.excerpt { color: var(--color-neutral-600); }
+:deep(.rating-statistics h4) { color: var(--color-text); }
+:deep(.rating-statistics .meta) { color: var(--color-neutral-600); }
+@media (max-width: 900px) { .movie-hero { min-height: 460px; padding: 52px 24px; }.detail-layout { grid-template-columns: 1fr; }.detail-aside { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }.movie-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } } @media (max-width: 620px) { .movie-detail { padding: 14px 16px 44px; }.movie-hero { min-height: 390px; padding: 34px 20px; }.hero-scrim { background: linear-gradient(90deg, rgba(12,14,24,.96), rgba(12,14,24,.7)); }.hero-content { align-items: flex-end; gap: 16px; min-height: 0; }.hero-poster { width: 126px !important; height: 186px !important; }.hero-copy h1 { font-size: 34px; }.original-title { font-size: 16px; }.facts { margin: 11px 0 17px; font-size: 15px; }.detail-layout { gap: 26px; margin-top: 30px; }.detail-aside { grid-template-columns: 1fr; }.crew-list { grid-template-columns: 1fr; }.movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.review-item { display: grid; gap: 10px; }.review-meta { justify-items: start; }.detail-section { padding-bottom: 28px; margin-bottom: 28px; }.detail-section h2 { font-size: 24px; }.synopsis p { font-size: 16px; } }
 </style>

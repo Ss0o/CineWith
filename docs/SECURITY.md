@@ -157,6 +157,7 @@ OAuth2 인증만 완료한 가입 미완료 사용자를 `Member(status=PENDING)
 - 로그인 성공 시 `OidcLoginSuccessHandler`가 상태별 Frontend URL로 Redirect한다. 두 URL은 `app.security.oauth2.redirect.*` 설정으로 관리한다.
 - Google Client ID와 Client Secret은 각각 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` 환경 변수로 주입한다. Scope는 `openid`, `profile`, `email`이다.
 - `POST /api/members/signup`은 `ROLE_SIGNUP_REQUIRED`만 접근한다. 성공 시 Session의 신뢰된 Identity와 요청 닉네임으로 Member를 생성한 뒤 인증을 `ROLE_MEMBER`로 전환한다.
+- `GET /api/members/signup-context`는 `ROLE_SIGNUP_REQUIRED`만 접근하며, 가입 화면 표시를 위해 Principal의 provider와 email만 반환한다. Member 내부 ID와 Google `sub`는 반환하지 않는다.
 - `ANONYMOUS`의 가입 요청은 401, 이미 가입한 `MEMBER`의 재요청은 인증은 되어 있으나 가입 권한이 없으므로 403이다.
 - `GET /api/members/me`는 `ROLE_MEMBER` Principal의 내부 `memberId`로 현재 Member를 조회한다. 클라이언트가 조회 ID를 전달하지 않는다.
 - 인증·인가 오류와 OIDC 로그인 실패는 고정된 `code`, `message` JSON만 반환하며 내부 예외 메시지와 Stack Trace를 노출하지 않는다.

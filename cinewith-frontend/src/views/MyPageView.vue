@@ -1,11 +1,23 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import TopNav from '../components/layout/TopNav.vue'
 import AvatarBadge from '../components/AvatarBadge.vue'
 import { useAuth, AUTH_STATE } from '../composables/useAuth'
+import { dataService } from '../data'
+import { usePagedList } from '../composables/usePagedList'
+import PaginationControls from '../components/PaginationControls.vue'
 
 const { state, openLoginModal } = useAuth()
 const isMember = computed(() => state.status === AUTH_STATE.MEMBER)
+const reviews = usePagedList((page, size) => dataService.reviews.listMine(page, size))
+const comments = usePagedList((page, size) => dataService.comments.listMine(page, size))
+
+onMounted(() => {
+  if (isMember.value) {
+    reviews.load()
+    comments.load()
+  }
+})
 </script>
 
 <template>
@@ -24,8 +36,44 @@ const isMember = computed(() => state.status === AUTH_STATE.MEMBER)
         <div class="meta">{{ state.member.provider }} 로그인 · 가입일 {{ state.member.joinedAt }}</div>
       </div>
     </div>
-    <div class="card" style="padding: 18px; color: color-mix(in srgb, var(--color-text) 58%, transparent); font-size: 13px; line-height: 1.7">
-      현재 Backend는 회원별 Review/Comment 목록 Endpoint를 제공하지 않습니다. 내부 Member ID를 클라이언트에 노출하거나 임의로 전달하지 않으며, 지원 API가 추가되면 이 영역에 내 활동을 연결합니다.
-    </div>
+    <section class="card" style="padding: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
+        <h3 style="margin: 0">내가 쓴 리뷰</h3>
+        <span v-if="reviews.state.totalElements !== null" class="meta">{{ reviews.state.totalElements }}개</span>
+      </div>
+      <div v-if="reviews.state.loading" class="meta">리뷰를 불러오는 중입니다.</div>
+      <div v-else-if="reviews.state.error" style="display: flex; gap: 10px; align-items: center" class="meta">
+        <span>{{ reviews.state.error }}</span><button class="btn btn-secondary" @click="reviews.load(reviews.state.page)">다시 시도</button>
+      </div>
+      <div v-else-if="reviews.state.content.length === 0" class="meta">아직 작성한 리뷰가 없습니다.</div>
+      <div v-else style="display: flex; flex-direction: column; gap: 12px">
+        <RouterLink v-for="review in reviews.state.content" :key="review.id" :to="`/reviews/${review.id}`" style="color: inherit; text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--color-divider)">
+          <div class="meta">{{ review.movieTitle }}</div>
+          <strong>{{ review.title }}</strong>
+          <div class="meta" style="margin-top: 5px">{{ review.rating }}점 · {{ review.createdAtLabel }}</div>
+        </RouterLink>
+      </div>
+      <PaginationControls :page="reviews.state.page" :total-pages="reviews.state.totalPages" :loading="reviews.state.loading" label="내 리뷰" @change="reviews.load" />
+    </section>
+
+    <section class="card" style="padding: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
+        <h3 style="margin: 0">내가 쓴 댓글</h3>
+        <span v-if="comments.state.totalElements !== null" class="meta">{{ comments.state.totalElements }}개</span>
+      </div>
+      <div v-if="comments.state.loading" class="meta">댓글을 불러오는 중입니다.</div>
+      <div v-else-if="comments.state.error" style="display: flex; gap: 10px; align-items: center" class="meta">
+        <span>{{ comments.state.error }}</span><button class="btn btn-secondary" @click="comments.load(comments.state.page)">다시 시도</button>
+      </div>
+      <div v-else-if="comments.state.content.length === 0" class="meta">아직 작성한 댓글이 없습니다.</div>
+      <div v-else style="display: flex; flex-direction: column; gap: 12px">
+        <RouterLink v-for="comment in comments.state.content" :key="comment.id" :to="`/reviews/${comment.reviewId}`" style="color: inherit; text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--color-divider)">
+          <div class="meta">{{ comment.movieTitle }} · {{ comment.reviewTitle }}</div>
+          <div style="margin-top: 5px">{{ comment.body }}</div>
+          <div class="meta" style="margin-top: 5px">{{ comment.createdAtLabel }}</div>
+        </RouterLink>
+      </div>
+      <PaginationControls :page="comments.state.page" :total-pages="comments.state.totalPages" :loading="comments.state.loading" label="내 댓글" @change="comments.load" />
+    </section>
   </div>
 </template>

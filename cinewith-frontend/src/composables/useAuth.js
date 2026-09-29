@@ -12,6 +12,7 @@ export const AUTH_STATE = {
 const state = reactive({
   status: AUTH_STATE.ANONYMOUS,
   member: null,
+  signupContext: null,
   isLoginModalOpen: false,
   isSignupModalOpen: false,
   error: null,
@@ -24,6 +25,11 @@ export async function initializeAuth() {
   } catch (error) {
     if (window.location.pathname === '/signup' && error instanceof ApiError && error.status === 403) {
       state.status = AUTH_STATE.SIGNUP_REQUIRED
+      try {
+        state.signupContext = await dataService.auth.signupContext()
+      } catch (contextError) {
+        state.error = contextError.message
+      }
       state.isSignupModalOpen = true
       return
     }
@@ -51,6 +57,7 @@ function googleLoginUrl() {
 async function completeSignup(nickname) {
   state.member = await dataService.auth.signup(nickname)
   state.status = AUTH_STATE.MEMBER
+  state.signupContext = null
   state.isSignupModalOpen = false
   if (window.location.pathname === '/signup') window.history.replaceState({}, '', '/')
 }
@@ -63,6 +70,7 @@ async function logout() {
   await dataService.auth.logout()
   state.status = AUTH_STATE.ANONYMOUS
   state.member = null
+  state.signupContext = null
 }
 
 export function useAuth() {

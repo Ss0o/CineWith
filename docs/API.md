@@ -19,7 +19,10 @@
 | Method | Path | 목적 | 접근 권한 | 성공 상태 |
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/members/signup` | 닉네임 설정 및 회원가입 완료 | `SIGNUP_REQUIRED` | `201 Created` |
+| `GET` | `/api/members/signup-context` | 가입 전 Google 계정 표시 정보 조회 | `SIGNUP_REQUIRED` | `200 OK` |
 | `GET` | `/api/members/me` | 현재 회원 정보 조회 | `MEMBER` | `200 OK` |
+| `GET` | `/api/members/me/reviews` | 현재 회원의 리뷰 목록 | `MEMBER` | `200 OK` |
+| `GET` | `/api/members/me/comments` | 현재 회원의 댓글 목록 | `MEMBER` | `200 OK` |
 | `POST` | `/api/logout` | 현재 서비스 Session 로그아웃 | 인증된 사용자 | `204 No Content` |
 | `GET` | `/api/movies/now-playing` | TMDB 현재 상영작 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/discovery/home` | 추천·탐색 홈 섹션 조회 | Public | `200 OK` |
@@ -82,6 +85,27 @@ Response DTO:
 
 서비스 내부 `member.id`와 Google `providerId(sub)`는 응답에 노출하지 않는다.
 
+### GET /api/members/signup-context
+
+가입이 아직 완료되지 않은 `SIGNUP_REQUIRED` 사용자의 Google 계정 표시 정보를 반환한다. 가입 모달이 실제 인증 계정의 이메일과 초기 문자를 표시하기 위한 API이며, Member 내부 ID나 Google `providerId(sub)`는 반환하지 않는다.
+
+- 접근 권한: `SIGNUP_REQUIRED`
+- 성공: `200 OK`
+- `ANONYMOUS` 요청: `401 Unauthorized`
+- `MEMBER` 요청: `403 Forbidden`
+
+Response는 `provider`, `email`을 포함하며 email은 Google이 제공하지 않은 경우 null일 수 있다.
+
+### GET /api/members/me/reviews
+
+현재 세션의 회원이 작성한 리뷰를 최신순으로 조회한다. `page`의 기본값은 0, `size`의 기본값은 20이며 최대 100이다. 정렬은 `createdAt DESC, reviewId DESC`다. 응답 페이지 형식과 리뷰 카드 필드는 `GET /api/reviews`와 같다. 대상 회원 ID는 요청으로 받지 않는다.
+
+### GET /api/members/me/comments
+
+현재 세션의 회원이 작성한 댓글을 최신순으로 조회한다. `page`의 기본값은 0, `size`의 기본값은 20이며 최대 100이다. 정렬은 `createdAt DESC, commentId DESC`다.
+
+각 항목은 `commentId`, `reviewId`, `tmdbId`, `movieTitle`, `reviewTitle`, `content`, `createdAt`, `updatedAt`을 제공한다. 댓글이 연결된 리뷰 상세로 이동할 수 있도록 `reviewId`를 포함하지만 Member 내부 ID는 노출하지 않는다.
+
 ### POST /api/logout
 
 현재 서비스 HTTP Session을 무효화하고 인증 정보를 제거한다.
@@ -102,6 +126,22 @@ TMDB의 현재 상영작을 조회해 메인 화면에 제공한다. `TMDB_LANGU
 
 - 접근 권한: Public
 - 성공: `200 OK`
+
+### GET /api/movies/discovery/home
+
+영화 탐색 홈에 표시할 현재 상영, 일반 추천, 개봉 예정과 장르별 영화를 함께 조회한다. 장르는 `action`, `adventure`, `animation`, `comedy`, `drama`, `fantasy`, `horror`, `romance`, `sf`, `thriller` 키로 제공한다. 각 섹션은 `movies`와 `status`를 가지며, 장르별 영화는 TMDB 인기도 순이다.
+
+- 접근 권한: Public
+- 성공: `200 OK`
+- 조회 결과는 서비스 DB에 저장하지 않는다.
+
+### GET /api/movies/discovery/{section}?page={page}
+
+사이드바에서 선택한 영화 탐색 목록을 TMDB 페이지 단위로 조회한다. `section`은 `recommended`, `now-playing`, `upcoming` 또는 홈에서 지원하는 장르 키이며, `page`는 0부터 시작해 최대 499다. 응답은 `content`, `page`, `size`(20), `totalElements`, `totalPages`를 제공한다.
+
+- 접근 권한: Public
+- 성공: `200 OK`
+- 조회 결과는 서비스 DB에 저장하지 않는다.
 
 ### GET /api/movies/search?query={query}
 

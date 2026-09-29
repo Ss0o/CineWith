@@ -17,7 +17,7 @@ public record ReviewFeedItemResponse(
         Instant createdAt
 ) {
 
-    static ReviewFeedItemResponse from(ReviewFeedItem review) {
+    public static ReviewFeedItemResponse from(ReviewFeedItem review) {
         return new ReviewFeedItemResponse(
                 review.reviewId(), review.tmdbId(), review.movieTitle(), review.posterPath(),
                 review.authorNickname(), review.rating(), review.title(), preview(review.content()), review.createdAt()

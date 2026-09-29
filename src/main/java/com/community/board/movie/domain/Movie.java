@@ -19,6 +19,10 @@ import java.util.Objects;
         name = "movie",
         uniqueConstraints = @UniqueConstraint(name = "uk_movie_tmdb_id", columnNames = "tmdb_id")
 )
+/**
+ * 리뷰가 작성된 TMDB 영화의 최소 로컬 사본이다.
+ * 영화 검색·상세·추천 결과를 모두 저장하지 않으며, TMDB ID는 외부 식별자이자 유일한 업무 키다.
+ */
 public class Movie {
 
     @Id

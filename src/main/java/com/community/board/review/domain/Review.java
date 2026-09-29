@@ -27,6 +27,10 @@ import java.util.Objects;
                 columnNames = {"member_id", "movie_id"}
         )
 )
+/**
+ * 회원이 영화에 남긴 하나의 리뷰를 나타내는 JPA 엔터티다.
+ * 한 회원은 같은 영화에 하나만 작성할 수 있으며, 평점의 범위와 0.5 단위 규칙은 이 도메인에서 보장한다.
+ */
 public class Review {
 
     private static final BigDecimal MIN_RATING = new BigDecimal("0.5");
@@ -89,10 +93,12 @@ public class Review {
             String content,
             BigDecimal rating
     ) {
+        // 생성 시각은 서버가 기록하며 클라이언트 입력을 받지 않는다.
         return new Review(member, movie, title, content, rating, Instant.now());
     }
 
     public void update(String title, String content, BigDecimal rating) {
+        // null은 해당 필드를 수정하지 않는다는 뜻이다. 세 값 모두 null인 요청은 허용하지 않는다.
         if (title == null && content == null && rating == null) {
             throw new InvalidReviewUpdateException();
         }
@@ -115,6 +121,7 @@ public class Review {
     }
 
     private static BigDecimal validateRating(BigDecimal rating) {
+        // BigDecimal 비교를 사용해 부동소수점 오차 없이 0.5 단위만 허용한다.
         if (rating == null
                 || rating.compareTo(MIN_RATING) < 0
                 || rating.compareTo(MAX_RATING) > 0

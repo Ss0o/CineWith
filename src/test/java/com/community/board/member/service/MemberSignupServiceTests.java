@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/** 가입 경합으로 DB 유니크 제약이 충돌했을 때의 예외 변환을 검증한다. */
 class MemberSignupServiceTests {
 
     @Mock
@@ -34,6 +35,7 @@ class MemberSignupServiceTests {
 
     @Test
     void translatesDatabaseConstraintViolationToSignupConflict() {
+        // Given: 아직 중복이 없어 보이지만 저장 시 유니크 제약이 충돌하는 가입 요청이 있다.
         CommunityOidcPrincipal principal = signupRequiredPrincipal();
         when(memberRepository.existsByNickname("movieFan")).thenReturn(false);
         when(memberRepository.findByProviderAndProviderId(OAuthProvider.GOOGLE, "signup-sub"))
@@ -41,6 +43,7 @@ class MemberSignupServiceTests {
         when(memberRepository.saveAndFlush(any(Member.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
+        // When / Then: 가입을 시도하면 DB 구현 예외 대신 서비스의 가입 충돌 예외를 반환한다.
         assertThatThrownBy(() -> memberSignupService.signup(principal, "movieFan"))
                 .isInstanceOf(MemberSignupConflictException.class);
     }
