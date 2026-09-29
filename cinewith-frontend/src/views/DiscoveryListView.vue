@@ -10,16 +10,16 @@ import { dataService } from '../data'
 const props = defineProps({ section: { type: String, required: true } })
 
 const sectionMeta = {
-  recommended: { title: '추천 영화', description: 'TMDB 평점·평가 수·인기도 기준' },
-  'now-playing': { title: '현재 상영작', description: 'TMDB 인기도 기준' },
-  upcoming: { title: '개봉 예정작', description: 'TMDB 인기도와 개봉일 기준' },
-  action: { title: '액션 영화', description: 'TMDB 인기도 기준' }, adventure: { title: '모험 영화', description: 'TMDB 인기도 기준' },
-  animation: { title: '애니메이션 영화', description: 'TMDB 인기도 기준' }, comedy: { title: '코미디 영화', description: 'TMDB 인기도 기준' },
-  drama: { title: '드라마 영화', description: 'TMDB 인기도 기준' }, fantasy: { title: '판타지 영화', description: 'TMDB 인기도 기준' },
-  horror: { title: '공포 영화', description: 'TMDB 인기도 기준' }, romance: { title: '로맨스 영화', description: 'TMDB 인기도 기준' },
-  sf: { title: 'SF 영화', description: 'TMDB 인기도 기준' }, thriller: { title: '스릴러 영화', description: 'TMDB 인기도 기준' },
+  recommended: { title: '추천 영화' },
+  'now-playing': { title: '현재 상영작' },
+  upcoming: { title: '개봉 예정작' },
+  action: { title: '액션 영화' }, adventure: { title: '모험 영화' },
+  animation: { title: '애니메이션 영화' }, comedy: { title: '코미디 영화' },
+  drama: { title: '드라마 영화' }, fantasy: { title: '판타지 영화' },
+  horror: { title: '공포 영화' }, romance: { title: '로맨스 영화' },
+  sf: { title: 'SF 영화' }, thriller: { title: '스릴러 영화' },
 }
-const meta = computed(() => sectionMeta[props.section] ?? { title: '영화 탐색', description: '' })
+const meta = computed(() => sectionMeta[props.section] ?? { title: '영화 탐색' })
 const movies = usePagedList((page) => dataService.movies.discoveryPage(props.section, page))
 
 watch(() => props.section, () => { movies.reset(); movies.load(0) }, { immediate: true })
@@ -28,8 +28,7 @@ watch(() => props.section, () => { movies.reset(); movies.load(0) }, { immediate
 <template>
   <BoardShell>
     <main style="padding: 24px 26px 48px">
-      <h3 style="margin: 0 0 5px">{{ meta.title }}</h3>
-      <p class="meta" style="margin: 0 0 24px">{{ meta.description }}</p>
+      <h3 style="margin: 0 0 24px">{{ meta.title }}</h3>
       <p v-if="movies.state.loading" role="status">영화를 불러오는 중입니다.</p>
       <div v-else-if="movies.state.error" role="alert"><p>{{ movies.state.error }}</p><button class="btn btn-secondary" @click="movies.load()">다시 불러오기</button></div>
       <p v-else-if="!movies.state.content.length" class="meta">표시할 영화가 없습니다.</p>

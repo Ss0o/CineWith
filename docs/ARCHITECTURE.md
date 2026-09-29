@@ -71,3 +71,7 @@ Review의 `member`, `movie`는 LAZY이므로 Entity `ReviewView.from`으로 목�
 ## 영화 탐색 홈 (3.5단계)
 
 `MovieDiscoveryController → MovieDiscoveryService → MovieClient` 경계로 외부 호출을 분리한다. 현재 상영·개봉 예정은 `MoviePopularityPolicy`가 TMDB 인기도를 우선하고 개봉일과 TMDB ID로 안정적으로 정렬한다. 홈 API는 외부 영화 섹션만 집계하고 최신 리뷰는 기존 API로 독립 조회한다. Caffeine cache는 완전한 홈 결과만 저장하며 TMDB 섹션 실패가 포함된 응답은 캐시하지 않는다.
+
+## 마이페이지 활동 내역 (4단계)
+
+마이페이지 API는 URL이나 요청 본문의 회원 식별자를 받지 않고 Spring Security Principal의 `memberId`만 사용한다. 리뷰·댓글 목록은 각각 Repository DTO projection으로 필요한 Review, Movie scalar만 JOIN해 가져오므로 활동 목록 변환 중 Member·Movie의 추가 조회를 만들지 않는다. 댓글 활동에는 대상 리뷰와 영화를 연결할 수 있는 외부 `reviewId`, `tmdbId`를 포함하지만 내부 Member ID는 응답에 포함하지 않는다.

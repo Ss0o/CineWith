@@ -98,6 +98,15 @@ public class ReviewService {
                 : reviewRepository.searchFeed(normalizedQuery, pageRequest));
     }
 
+    @Transactional(readOnly = true)
+    public ReviewFeedPage getMyFeed(Long memberId, int page, int size) {
+        getMember(memberId);
+        return ReviewFeedPage.from(reviewRepository.findFeedByMemberId(
+                memberId,
+                PageRequest.of(page, size)
+        ));
+    }
+
     @Transactional
     public ReviewView update(
             Long memberId,

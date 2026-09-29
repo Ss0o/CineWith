@@ -25,6 +25,7 @@ function commentView(comment) {
 export const apiProvider = {
   auth: {
     async me() { const member = await apiRequest('/api/members/me'); return { ...member, initial: initial(member.nickname), joinedAt: dateLabel(member.createdAt) } },
+    async signupContext() { return apiRequest('/api/members/signup-context') },
     async signup(nickname) { await apiRequest('/api/members/signup', { method: 'POST', body: JSON.stringify({ nickname }) }); return this.me() },
     async logout() { await apiRequest('/api/logout', { method: 'POST' }); clearCsrfToken() },
   },
@@ -42,6 +43,10 @@ export const apiProvider = {
     async recommendations(id) { return (await apiRequest(`/api/movies/${id}/recommendations`)).map(movieView) },
   },
   reviews: {
+    async listMine(page = 0, size = 20) {
+      const result = await apiRequest(`/api/members/me/reviews?page=${page}&size=${size}`)
+      return { ...result, content: result.content.map(reviewView) }
+    },
     async listFeed(query, page = 0, size = 20) {
       const params = new URLSearchParams({ page, size })
       if (query) params.set('query', query)
@@ -55,6 +60,18 @@ export const apiProvider = {
     async delete(id) { await apiRequest(`/api/reviews/${id}`, { method: 'DELETE' }) },
   },
   comments: {
+    async listMine(page = 0, size = 20) {
+      const result = await apiRequest(`/api/members/me/comments?page=${page}&size=${size}`)
+      return {
+        ...result,
+        content: result.content.map((comment) => ({
+          ...comment,
+          id: comment.commentId,
+          body: comment.content,
+          createdAtLabel: dateLabel(comment.createdAt),
+        })),
+      }
+    },
     async list(reviewId, page = 0, size = 20) { const result = await apiRequest(`/api/reviews/${reviewId}/comments?page=${page}&size=${size}`); return { ...result, content: result.content.map(commentView) } },
     async create(reviewId, content) { return commentView(await apiRequest(`/api/reviews/${reviewId}/comments`, { method: 'POST', body: JSON.stringify({ content }) })) },
     async update(id, content) { return commentView(await apiRequest(`/api/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ content }) })) },

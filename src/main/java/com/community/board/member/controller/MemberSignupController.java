@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -29,6 +30,14 @@ public class MemberSignupController {
     ) {
         this.memberSignupService = memberSignupService;
         this.authenticationUpdater = authenticationUpdater;
+    }
+
+    /** 가입 전 OIDC Principal에서 화면 표시에 필요한 최소 정보만 반환한다. */
+    @GetMapping("/signup-context")
+    public MemberSignupContextResponse signupContext(
+            @AuthenticationPrincipal CommunityOidcPrincipal principal
+    ) {
+        return new MemberSignupContextResponse(principal.getProvider(), principal.getEmail());
     }
 
     @PostMapping("/signup")
