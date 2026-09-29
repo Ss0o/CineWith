@@ -19,6 +19,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "comment")
+/** 리뷰에 속한 단일 댓글. 삭제 상태를 보관하지 않는 V1 정책에 따라 서비스가 Hard Delete한다. */
 public class Comment {
 
     @Id
@@ -60,6 +61,7 @@ public class Comment {
     }
 
     public void update(String content) {
+        // 내용 검증에 통과한 수정만 반영하고 수정 시각을 갱신한다.
         this.content = validateContent(content);
         this.updatedAt = Instant.now();
     }

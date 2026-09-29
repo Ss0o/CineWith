@@ -26,6 +26,10 @@ import java.util.Objects;
                 @UniqueConstraint(name = "uk_member_nickname", columnNames = "nickname")
         }
 )
+/**
+ * 가입을 완료한 서비스 회원이다. OAuth provider/providerId로 외부 신원을 식별하고,
+ * 닉네임은 커뮤니티에 공개되는 유일한 표시 이름이다.
+ */
 public class Member {
 
     @Id
