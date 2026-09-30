@@ -62,11 +62,7 @@ async function submitReview() {
 </script>
 
 <template>
-  <TopNav :show-board-link="false">
-    <template #actions>
-      <button class="btn btn-primary" :disabled="submitting || movieLoading" @click="submitReview">{{ submitting ? '등록 중…' : '등록' }}</button>
-    </template>
-  </TopNav>
+  <TopNav :show-board-link="false" />
 
   <div style="padding: 26px 32px 32px; display: flex; gap: 26px; max-width: 860px; margin: 0 auto; width: 100%">
     <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 18px">
@@ -112,6 +108,10 @@ async function submitReview() {
       <div class="field">
         <label>본문</label>
         <textarea class="input" v-model="content" style="min-height: 220px" placeholder="영화에 대한 생각을 자유롭게 남겨주세요"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end">
+        <button class="btn btn-primary" :disabled="submitting || movieLoading" @click="submitReview">{{ submitting ? '등록 중…' : '등록' }}</button>
       </div>
     </div>
 
