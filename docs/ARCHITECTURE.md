@@ -36,6 +36,8 @@ Review rating은 API·도메인·PostgreSQL에서 같은 `BigDecimal` 값을 사
 
 Review Application Use Case는 `ReviewService`의 트랜잭션 안에서 Member 확인, 필요 시 `MovieClient` 조회와 Movie 저장, 중복 확인, Review 저장을 수행한다. Review 저장이 실패하면 이 과정에서 생성한 Movie도 Rollback된다. Review 삭제는 양방향 컬렉션이나 Cascade를 추가하지 않고 `CommentRepository`로 소속 Comment를 먼저 명시적으로 삭제한 뒤 Review를 삭제한다.
 
+추천은 `recommendation` 기능 패키지의 `ReviewRecommendation`과 `CommentRecommendation` 두 Entity로 저장한다. 다형 대상 테이블 대신 대상별 FK와 `UNIQUE(member_id, target_id)`를 사용해 한 회원의 중복 추천을 DB에서도 막는다. `RecommendationService`가 생성·중복 검사·추천 수 조회를 담당하고, 원본 Review 또는 Comment 삭제 시 해당 추천 기록을 먼저 Hard Delete해 FK 무결성을 유지한다. 추천 수는 원본 Entity의 파생 컬럼으로 저장하지 않고 추천 기록 count로 조회한다.
+
 Comment Application Use Case는 `CommentService`가 현재 Principal의 `memberId`로 Member를 다시 조회하고 Review·Comment 존재 여부와 Comment 작성자 소유권을 검증한다. 변경 Use Case는 Transaction 안에서 처리하고 목록은 단순 derived query와 Offset Pagination을 사용한다. Member·Review 역방향 컬렉션, Cascade, Fetch Join과 EntityGraph는 추가하지 않는다.
 
 ## Architecture Decisions Required

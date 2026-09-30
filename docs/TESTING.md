@@ -152,6 +152,14 @@ Entity의 API Response 직접 반환, DTO 명명 규칙, Transaction Annotation 
 | `COMMENT-005` | Service, Controller / Security | 작성자만 Comment를 삭제할 수 있다. 다른 Member와 Review 작성자는 403이며 없는 Comment는 404다. |
 | `COMMENT-006` | Service, Integration | 삭제된 Comment가 DB에서 제거되어 다시 조회되지 않으며 삭제 상태로 남지 않는다. Review 삭제 시 소속 Comment도 함께 제거된다. |
 
+### 추천
+
+| 요구사항 ID | 테스트 계층 | 핵심 검증 시나리오 |
+| --- | --- | --- |
+| `RECOMMEND-001` | Service, Controller / Security | MEMBER가 리뷰·댓글 추천을 생성하면 최신 개수를 반환하고, ANONYMOUS와 SIGNUP_REQUIRED는 각각 401·403이다. |
+| `RECOMMEND-002` | Service, Integration | 같은 Member와 대상의 두 번째 추천은 409이며 PostgreSQL UNIQUE 제약도 중복 저장을 거부한다. |
+| `MEMBER-008` | Service, Controller | 현재 Session Member의 추천 리뷰·댓글만 추천 시각 내림차순 페이지로 반환하며 요청 회원 ID를 받지 않는다. |
+
 ## Member 테스트 시나리오
 
 - `SIGNUP_REQUIRED` 사용자는 유효하고 중복되지 않은 닉네임으로 가입할 수 있다.

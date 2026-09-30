@@ -14,7 +14,9 @@ public record ReviewResponse(
         String content,
         BigDecimal rating,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long recommendationCount,
+        boolean recommendedByMe
 ) {
 
     static ReviewResponse from(ReviewView review) {
@@ -27,7 +29,7 @@ public record ReviewResponse(
                 review.content(),
                 review.rating(),
                 review.createdAt(),
-                review.updatedAt()
+                review.updatedAt(), review.recommendationCount(), review.recommendedByMe()
         );
     }
 }

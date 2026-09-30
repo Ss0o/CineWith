@@ -51,8 +51,8 @@ public class ReviewController {
     }
 
     @GetMapping("/reviews/{reviewId}")
-    public ReviewResponse get(@PathVariable Long reviewId) {
-        return ReviewResponse.from(reviewService.get(reviewId));
+    public ReviewResponse get(@PathVariable Long reviewId, @AuthenticationPrincipal CommunityOidcPrincipal principal) {
+        return ReviewResponse.from(reviewService.get(reviewId, memberIdOrNull(principal)));
     }
 
     @GetMapping("/reviews")
@@ -98,4 +98,6 @@ public class ReviewController {
     private Long memberId(CommunityOidcPrincipal principal) {
         return principal.getMemberId().orElseThrow();
     }
+
+    private Long memberIdOrNull(CommunityOidcPrincipal principal) { return principal == null ? null : principal.getMemberId().orElse(null); }
 }

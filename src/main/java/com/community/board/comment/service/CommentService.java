@@ -8,6 +8,8 @@ import com.community.board.member.service.MemberNotFoundException;
 import com.community.board.review.domain.Review;
 import com.community.board.review.repository.ReviewRepository;
 import com.community.board.review.service.ReviewNotFoundException;
+import com.community.board.recommendation.repository.CommentRecommendationRepository;
+import com.community.board.recommendation.service.RecommendationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -26,15 +28,21 @@ public class CommentService {
     private final MemberRepository memberRepository;
     private final ReviewRepository reviewRepository;
     private final CommentRepository commentRepository;
+    private final RecommendationService recommendationService;
+    private final CommentRecommendationRepository commentRecommendationRepository;
 
     public CommentService(
             MemberRepository memberRepository,
             ReviewRepository reviewRepository,
-            CommentRepository commentRepository
+            CommentRepository commentRepository,
+            RecommendationService recommendationService,
+            CommentRecommendationRepository commentRecommendationRepository
     ) {
         this.memberRepository = memberRepository;
         this.reviewRepository = reviewRepository;
         this.commentRepository = commentRepository;
+        this.recommendationService = recommendationService;
+        this.commentRecommendationRepository = commentRecommendationRepository;
     }
 
     @Transactional
@@ -42,12 +50,13 @@ public class CommentService {
     public CommentView create(Long memberId, Long reviewId, String content) {
         Member member = getMember(memberId);
         Review review = getReview(reviewId);
-        return CommentView.from(commentRepository.save(Comment.create(member, review, content)));
+        Comment comment = commentRepository.save(Comment.create(member, review, content));
+        return view(comment, memberId);
     }
 
     @Transactional(readOnly = true)
     /** 존재하는 리뷰의 댓글을 작성일 오름차순으로 페이지 조회한다. */
-    public CommentPage getByReview(Long reviewId, int page, int size) {
+    public CommentPage getByReview(Long reviewId, int page, int size, Long memberId) {
         getReview(reviewId);
         PageRequest pageRequest = PageRequest.of(
                 page,
@@ -55,9 +64,11 @@ public class CommentService {
                 Sort.by(Sort.Direction.ASC, "createdAt")
         );
         return CommentPage.from(
-                commentRepository.findByReviewId(reviewId, pageRequest).map(CommentView::from)
+                commentRepository.findByReviewId(reviewId, pageRequest).map(comment -> view(comment, memberId))
         );
     }
+
+    public CommentPage getByReview(Long reviewId, int page, int size) { return getByReview(reviewId, page, size, null); }
 
     @Transactional(readOnly = true)
     /** 현재 회원이 작성한 댓글을 최신순으로 페이지 조회한다. */
@@ -77,7 +88,7 @@ public class CommentService {
         Comment comment = getComment(commentId);
         verifyOwner(member, comment);
         comment.update(content);
-        return CommentView.from(comment);
+        return view(comment, memberId);
     }
 
     @Transactional
@@ -86,6 +97,7 @@ public class CommentService {
         Member member = getMember(memberId);
         Comment comment = getComment(commentId);
         verifyOwner(member, comment);
+        commentRecommendationRepository.deleteByComment(comment);
         commentRepository.delete(comment);
     }
 
@@ -106,5 +118,10 @@ public class CommentService {
         if (!comment.getMember().getId().equals(member.getId())) {
             throw new CommentOwnershipException();
         }
+    }
+
+    private CommentView view(Comment comment, Long memberId) {
+        return CommentView.from(comment, recommendationService.commentCount(comment.getId()),
+                recommendationService.recommendedCommentBy(memberId, comment.getId()));
     }
 }

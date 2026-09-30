@@ -118,6 +118,20 @@ async function removeComment(comment) {
     if (current()) await comments.load()
   })
 }
+async function recommendReview() {
+  if (!isMember.value || review.value.recommendedByMe) return
+  await mutate(async (current) => {
+    const result = await dataService.reviews.recommend(props.id)
+    if (current()) { review.value.recommendationCount = result.recommendationCount; review.value.recommendedByMe = true }
+  })
+}
+async function recommendComment(comment) {
+  if (!isMember.value || comment.recommendedByMe) return
+  await mutate(async (current) => {
+    const result = await dataService.comments.recommend(comment.id)
+    if (current()) { comment.recommendationCount = result.recommendationCount; comment.recommendedByMe = true }
+  })
+}
 function changeCommentPage(page) {
   editingCommentId.value = null
   comments.load(page)
@@ -158,6 +172,11 @@ onBeforeUnmount(() => { version++; comments.reset() })
         </div>
       </form>
       <p v-else class="review-body">{{ review.excerpt }}</p>
+      <div class="actions">
+        <button class="btn btn-secondary" :disabled="busy || !isMember || review.recommendedByMe" @click="recommendReview">
+          <i class="ph ph-thumbs-up"></i>{{ review.recommendedByMe ? '추천함' : '추천' }} {{ review.recommendationCount }}
+        </button>
+      </div>
       <div v-if="ownsReview && !editing" class="actions">
         <button class="btn btn-ghost" :disabled="busy" @click="editReview">리뷰 수정</button>
         <button class="btn btn-ghost" :disabled="busy" @click="removeReview">리뷰 삭제</button>
@@ -193,6 +212,11 @@ onBeforeUnmount(() => { version++; comments.reset() })
           </form>
           <template v-else>
             <p class="review-body">{{ comment.body }}</p>
+            <div class="actions">
+              <button class="btn btn-ghost" :disabled="busy || !isMember || comment.recommendedByMe" @click="recommendComment(comment)">
+                <i class="ph ph-thumbs-up"></i>{{ comment.recommendedByMe ? '추천함' : '추천' }} {{ comment.recommendationCount }}
+              </button>
+            </div>
             <div v-if="isOwnContent(state, comment)" class="actions">
               <button class="btn btn-ghost" :disabled="busy" @click="editComment(comment)">수정</button>
               <button class="btn btn-ghost" :disabled="busy" @click="removeComment(comment)">삭제</button>

@@ -13,7 +13,7 @@ public record MemberCommentPage(
         int totalPages
 ) {
 
-    static MemberCommentPage from(Page<MemberCommentItem> comments) {
+    public static MemberCommentPage from(Page<MemberCommentItem> comments) {
         return new MemberCommentPage(
                 comments.getContent(), comments.getNumber(), comments.getSize(),
                 comments.getTotalElements(), comments.getTotalPages()

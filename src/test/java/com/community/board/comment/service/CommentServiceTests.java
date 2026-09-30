@@ -8,6 +8,8 @@ import com.community.board.member.repository.MemberRepository;
 import com.community.board.review.domain.Review;
 import com.community.board.review.repository.ReviewRepository;
 import com.community.board.review.service.ReviewNotFoundException;
+import com.community.board.recommendation.repository.CommentRecommendationRepository;
+import com.community.board.recommendation.service.RecommendationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,11 +40,13 @@ class CommentServiceTests {
     @Mock MemberRepository memberRepository;
     @Mock ReviewRepository reviewRepository;
     @Mock CommentRepository commentRepository;
+    @Mock RecommendationService recommendationService;
+    @Mock CommentRecommendationRepository commentRecommendationRepository;
     private CommentService commentService;
 
     @BeforeEach
     void setUp() {
-        commentService = new CommentService(memberRepository, reviewRepository, commentRepository);
+        commentService = new CommentService(memberRepository, reviewRepository, commentRepository, recommendationService, commentRecommendationRepository);
     }
 
     @Test

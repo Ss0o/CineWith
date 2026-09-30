@@ -5,6 +5,7 @@ import com.community.board.comment.service.MemberCommentPage;
 import com.community.board.review.service.ReviewFeedPage;
 import com.community.board.review.service.ReviewService;
 import com.community.board.security.CommunityOidcPrincipal;
+import com.community.board.recommendation.service.RecommendationService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,10 +22,12 @@ public class MemberActivityController {
 
     private final ReviewService reviewService;
     private final CommentService commentService;
+    private final RecommendationService recommendationService;
 
-    public MemberActivityController(ReviewService reviewService, CommentService commentService) {
+    public MemberActivityController(ReviewService reviewService, CommentService commentService, RecommendationService recommendationService) {
         this.reviewService = reviewService;
         this.commentService = commentService;
+        this.recommendationService = recommendationService;
     }
 
     @GetMapping("/reviews")
@@ -45,6 +48,24 @@ public class MemberActivityController {
     ) {
         MemberCommentPage comments = commentService.getMyComments(memberId(principal), page, size);
         return MemberCommentPageResponse.from(comments);
+    }
+
+    @GetMapping("/recommendations/reviews")
+    public MemberReviewPageResponse recommendedReviews(
+            @AuthenticationPrincipal CommunityOidcPrincipal principal,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return MemberReviewPageResponse.from(recommendationService.getRecommendedReviews(memberId(principal), page, size));
+    }
+
+    @GetMapping("/recommendations/comments")
+    public MemberCommentPageResponse recommendedComments(
+            @AuthenticationPrincipal CommunityOidcPrincipal principal,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return MemberCommentPageResponse.from(recommendationService.getRecommendedComments(memberId(principal), page, size));
     }
 
     private Long memberId(CommunityOidcPrincipal principal) {
