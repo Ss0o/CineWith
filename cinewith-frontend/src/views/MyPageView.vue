@@ -11,11 +11,15 @@ const { state, openLoginModal } = useAuth()
 const isMember = computed(() => state.status === AUTH_STATE.MEMBER)
 const reviews = usePagedList((page, size) => dataService.reviews.listMine(page, size))
 const comments = usePagedList((page, size) => dataService.comments.listMine(page, size))
+const recommendedReviews = usePagedList((page, size) => dataService.reviews.listRecommendedMine(page, size))
+const recommendedComments = usePagedList((page, size) => dataService.comments.listRecommendedMine(page, size))
 
 onMounted(() => {
   if (isMember.value) {
     reviews.load()
     comments.load()
+    recommendedReviews.load()
+    recommendedComments.load()
   }
 })
 </script>
@@ -36,7 +40,7 @@ onMounted(() => {
         <div class="meta">{{ state.member.provider }} 로그인 · 가입일 {{ state.member.joinedAt }}</div>
       </div>
     </div>
-    <section class="card" style="padding: 20px">
+    <section id="reviews" class="card" style="padding: 20px; scroll-margin-top: 16px">
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
         <h3 style="margin: 0">내가 쓴 리뷰</h3>
         <span v-if="reviews.state.totalElements !== null" class="meta">{{ reviews.state.totalElements }}개</span>
@@ -56,7 +60,7 @@ onMounted(() => {
       <PaginationControls :page="reviews.state.page" :total-pages="reviews.state.totalPages" :loading="reviews.state.loading" label="내 리뷰" @change="reviews.load" />
     </section>
 
-    <section class="card" style="padding: 20px">
+    <section id="comments" class="card" style="padding: 20px; scroll-margin-top: 16px">
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
         <h3 style="margin: 0">내가 쓴 댓글</h3>
         <span v-if="comments.state.totalElements !== null" class="meta">{{ comments.state.totalElements }}개</span>
@@ -74,6 +78,38 @@ onMounted(() => {
         </RouterLink>
       </div>
       <PaginationControls :page="comments.state.page" :total-pages="comments.state.totalPages" :loading="comments.state.loading" label="내 댓글" @change="comments.load" />
+    </section>
+
+    <section id="recommended-reviews" class="card" style="padding: 20px; scroll-margin-top: 16px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
+        <h3 style="margin: 0">추천한 리뷰</h3>
+        <span v-if="recommendedReviews.state.totalElements !== null" class="meta">{{ recommendedReviews.state.totalElements }}개</span>
+      </div>
+      <div v-if="recommendedReviews.state.loading" class="meta">추천한 리뷰를 불러오는 중입니다.</div>
+      <div v-else-if="recommendedReviews.state.error" class="meta"><span>{{ recommendedReviews.state.error }}</span> <button class="btn btn-secondary" @click="recommendedReviews.load(recommendedReviews.state.page)">다시 시도</button></div>
+      <div v-else-if="recommendedReviews.state.content.length === 0" class="meta">아직 추천한 리뷰가 없습니다.</div>
+      <div v-else style="display: flex; flex-direction: column; gap: 12px">
+        <RouterLink v-for="review in recommendedReviews.state.content" :key="review.id" :to="`/reviews/${review.id}`" style="color: inherit; text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--color-divider)">
+          <div class="meta">{{ review.movieTitle }}</div><strong>{{ review.title }}</strong><div class="meta" style="margin-top: 5px">{{ review.rating }}점</div>
+        </RouterLink>
+      </div>
+      <PaginationControls :page="recommendedReviews.state.page" :total-pages="recommendedReviews.state.totalPages" :loading="recommendedReviews.state.loading" label="추천한 리뷰" @change="recommendedReviews.load" />
+    </section>
+
+    <section id="recommended-comments" class="card" style="padding: 20px; scroll-margin-top: 16px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px">
+        <h3 style="margin: 0">추천한 댓글</h3>
+        <span v-if="recommendedComments.state.totalElements !== null" class="meta">{{ recommendedComments.state.totalElements }}개</span>
+      </div>
+      <div v-if="recommendedComments.state.loading" class="meta">추천한 댓글을 불러오는 중입니다.</div>
+      <div v-else-if="recommendedComments.state.error" class="meta"><span>{{ recommendedComments.state.error }}</span> <button class="btn btn-secondary" @click="recommendedComments.load(recommendedComments.state.page)">다시 시도</button></div>
+      <div v-else-if="recommendedComments.state.content.length === 0" class="meta">아직 추천한 댓글이 없습니다.</div>
+      <div v-else style="display: flex; flex-direction: column; gap: 12px">
+        <RouterLink v-for="comment in recommendedComments.state.content" :key="comment.id" :to="`/reviews/${comment.reviewId}`" style="color: inherit; text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--color-divider)">
+          <div class="meta">{{ comment.movieTitle }} · {{ comment.reviewTitle }}</div><div style="margin-top: 5px">{{ comment.body }}</div>
+        </RouterLink>
+      </div>
+      <PaginationControls :page="recommendedComments.state.page" :total-pages="recommendedComments.state.totalPages" :loading="recommendedComments.state.loading" label="추천한 댓글" @change="recommendedComments.load" />
     </section>
   </div>
 </template>

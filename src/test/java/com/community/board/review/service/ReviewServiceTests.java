@@ -12,6 +12,9 @@ import com.community.board.review.domain.Review;
 import com.community.board.review.domain.InvalidReviewRatingException;
 import com.community.board.review.domain.InvalidReviewUpdateException;
 import com.community.board.review.repository.ReviewRepository;
+import com.community.board.recommendation.repository.CommentRecommendationRepository;
+import com.community.board.recommendation.repository.ReviewRecommendationRepository;
+import com.community.board.recommendation.service.RecommendationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,6 +55,10 @@ class ReviewServiceTests {
     @Mock
     private MovieClient movieClient;
 
+    @Mock private RecommendationService recommendationService;
+    @Mock private ReviewRecommendationRepository reviewRecommendationRepository;
+    @Mock private CommentRecommendationRepository commentRecommendationRepository;
+
     private ReviewService reviewService;
 
     @BeforeEach
@@ -61,7 +68,10 @@ class ReviewServiceTests {
                 movieRepository,
                 reviewRepository,
                 commentRepository,
-                movieClient
+                movieClient,
+                recommendationService,
+                reviewRecommendationRepository,
+                commentRecommendationRepository
         );
     }
 

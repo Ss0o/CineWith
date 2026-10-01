@@ -10,7 +10,9 @@ public record CommentResponse(
         String authorNickname,
         String content,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long recommendationCount,
+        boolean recommendedByMe
 ) {
 
     static CommentResponse from(CommentView comment) {
@@ -20,7 +22,7 @@ public record CommentResponse(
                 comment.authorNickname(),
                 comment.content(),
                 comment.createdAt(),
-                comment.updatedAt()
+                comment.updatedAt(), comment.recommendationCount(), comment.recommendedByMe()
         );
     }
 }

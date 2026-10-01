@@ -99,15 +99,12 @@ async function search() {
         <RouterLink to="/mypage" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false">
           <i class="ph ph-user" style="font-size: 15px"></i>마이페이지
         </RouterLink>
-        <RouterLink to="/mypage" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false">
+        <RouterLink to="/mypage#reviews" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false">
           <i class="ph ph-note-pencil" style="font-size: 15px"></i>내가 쓴 리뷰
         </RouterLink>
-        <div class="side-item" style="height: 32px; font-size: 13px">
-          <i class="ph ph-bookmark-simple" style="font-size: 15px"></i>스크랩
-        </div>
-        <div class="side-item" style="height: 32px; font-size: 13px">
-          <i class="ph ph-gear" style="font-size: 15px"></i>계정 · 연동 관리
-        </div>
+        <RouterLink to="/mypage#comments" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false"><i class="ph ph-chat-circle" style="font-size: 15px"></i>내가 쓴 댓글</RouterLink>
+        <RouterLink to="/mypage#recommended-reviews" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false"><i class="ph ph-thumbs-up" style="font-size: 15px"></i>추천한 리뷰</RouterLink>
+        <RouterLink to="/mypage#recommended-comments" class="side-item" style="height: 32px; font-size: 13px" @click="isDropdownOpen = false"><i class="ph ph-thumbs-up" style="font-size: 15px"></i>추천한 댓글</RouterLink>
         <div class="fade-rule" style="margin: 4px -8px"></div>
         <div
           class="side-item"

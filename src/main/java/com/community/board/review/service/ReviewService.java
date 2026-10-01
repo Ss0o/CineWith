@@ -11,6 +11,9 @@ import com.community.board.movie.repository.MovieRepository;
 import com.community.board.review.domain.Review;
 import com.community.board.review.domain.InvalidReviewUpdateException;
 import com.community.board.review.repository.ReviewRepository;
+import com.community.board.recommendation.repository.CommentRecommendationRepository;
+import com.community.board.recommendation.repository.ReviewRecommendationRepository;
+import com.community.board.recommendation.service.RecommendationService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,19 +37,28 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final CommentRepository commentRepository;
     private final MovieClient movieClient;
+    private final RecommendationService recommendationService;
+    private final ReviewRecommendationRepository reviewRecommendationRepository;
+    private final CommentRecommendationRepository commentRecommendationRepository;
 
     public ReviewService(
             MemberRepository memberRepository,
             MovieRepository movieRepository,
             ReviewRepository reviewRepository,
             CommentRepository commentRepository,
-            MovieClient movieClient
+            MovieClient movieClient,
+            RecommendationService recommendationService,
+            ReviewRecommendationRepository reviewRecommendationRepository,
+            CommentRecommendationRepository commentRecommendationRepository
     ) {
         this.memberRepository = memberRepository;
         this.movieRepository = movieRepository;
         this.reviewRepository = reviewRepository;
         this.commentRepository = commentRepository;
         this.movieClient = movieClient;
+        this.recommendationService = recommendationService;
+        this.reviewRecommendationRepository = reviewRecommendationRepository;
+        this.commentRecommendationRepository = commentRecommendationRepository;
     }
 
     @Transactional
@@ -79,7 +91,7 @@ public class ReviewService {
                 rating
         );
         try {
-            return ReviewView.from(reviewRepository.saveAndFlush(review));
+            return view(reviewRepository.saveAndFlush(review), memberId);
         } catch (DataIntegrityViolationException exception) {
             throw new DuplicateReviewException(exception);
         }
@@ -87,9 +99,11 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     /** 공개 리뷰 상세 조회. */
-    public ReviewView get(Long reviewId) {
-        return ReviewView.from(getReview(reviewId));
+    public ReviewView get(Long reviewId, Long memberId) {
+        return view(getReview(reviewId), memberId);
     }
+
+    public ReviewView get(Long reviewId) { return get(reviewId, null); }
 
     @Transactional(readOnly = true)
     /** 영화별 리뷰를 최신 작성순으로 페이지 조회한다. */
@@ -143,7 +157,7 @@ public class ReviewService {
                 command.contentPresent() ? command.content() : null,
                 command.ratingPresent() ? command.rating() : null
         );
-        return ReviewView.from(review);
+        return view(review, memberId);
     }
 
     @Transactional
@@ -152,6 +166,8 @@ public class ReviewService {
         Member member = getMember(memberId);
         Review review = getReview(reviewId);
         verifyOwner(member, review);
+        commentRecommendationRepository.deleteByReview(review);
+        reviewRecommendationRepository.deleteByReview(review);
         commentRepository.deleteByReview(review);
         reviewRepository.delete(review);
     }
@@ -196,5 +212,10 @@ public class ReviewService {
         }
         String normalized = query.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private ReviewView view(Review review, Long memberId) {
+        return ReviewView.from(review, recommendationService.reviewCount(review.getId()),
+                recommendationService.recommendedReviewBy(memberId, review.getId()));
     }
 }

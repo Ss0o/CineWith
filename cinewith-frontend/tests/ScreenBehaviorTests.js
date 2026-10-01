@@ -133,6 +133,23 @@ test('loads current member activity without sending a member identifier', async 
   assert.equal(comments.totalPages, 3)
 })
 
+test('loads recommended activity and sends recommendation requests with session credentials', async () => {
+  const calls = []
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url, options })
+    if (url === '/api/csrf') return json({ headerName: 'X-CSRF-TOKEN', token: 'test-token' })
+    if (url.includes('/recommendations/reviews')) return json({ ...page(0, 1), content: [{ reviewId: 9, tmdbId: 550, movieTitle: 'Movie', authorNickname: 'author', rating: 4.5, title: 'Title', contentPreview: 'Preview' }] })
+    return json({ targetId: 9, recommendationCount: 3, recommendedByMe: true })
+  }
+  const recommended = await apiProvider.reviews.listRecommendedMine()
+  const result = await apiProvider.reviews.recommend(9)
+  assert.equal(recommended.content[0].id, 9)
+  assert.equal(result.recommendationCount, 3)
+  assert.equal(calls[0].url, '/api/members/me/recommendations/reviews?page=0&size=20')
+  assert.equal(calls[2].url, '/api/reviews/9/recommendations')
+  assert.equal(calls[2].options.headers.get('X-CSRF-TOKEN'), 'test-token')
+})
+
 test('loads the authenticated Google account display information before signup', async () => {
   const urls = []
   globalThis.fetch = async (url) => {

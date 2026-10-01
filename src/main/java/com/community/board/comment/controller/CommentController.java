@@ -48,9 +48,10 @@ public class CommentController {
     public CommentPageResponse getByReview(
             @PathVariable Long reviewId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @AuthenticationPrincipal CommunityOidcPrincipal principal
     ) {
-        return CommentPageResponse.from(commentService.getByReview(reviewId, page, size));
+        return CommentPageResponse.from(commentService.getByReview(reviewId, page, size, memberIdOrNull(principal)));
     }
 
     @PatchMapping("/comments/{commentId}")
@@ -74,4 +75,6 @@ public class CommentController {
     private Long memberId(CommunityOidcPrincipal principal) {
         return principal.getMemberId().orElseThrow();
     }
+
+    private Long memberIdOrNull(CommunityOidcPrincipal principal) { return principal == null ? null : principal.getMemberId().orElse(null); }
 }

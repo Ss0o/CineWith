@@ -23,6 +23,8 @@
 | `GET` | `/api/members/me` | 현재 회원 정보 조회 | `MEMBER` | `200 OK` |
 | `GET` | `/api/members/me/reviews` | 현재 회원의 리뷰 목록 | `MEMBER` | `200 OK` |
 | `GET` | `/api/members/me/comments` | 현재 회원의 댓글 목록 | `MEMBER` | `200 OK` |
+| `GET` | `/api/members/me/recommendations/reviews` | 현재 회원이 추천한 리뷰 목록 | `MEMBER` | `200 OK` |
+| `GET` | `/api/members/me/recommendations/comments` | 현재 회원이 추천한 댓글 목록 | `MEMBER` | `200 OK` |
 | `POST` | `/api/logout` | 현재 서비스 Session 로그아웃 | 인증된 사용자 | `204 No Content` |
 | `GET` | `/api/movies/now-playing` | TMDB 현재 상영작 조회 | Public | `200 OK` |
 | `GET` | `/api/movies/discovery/home` | 추천·탐색 홈 섹션 조회 | Public | `200 OK` |
@@ -35,10 +37,12 @@
 | `GET` | `/api/reviews` | 전체 리뷰 피드 및 검색 | Public | `200 OK` |
 | `GET` | `/api/reviews/{reviewId}` | 리뷰 상세 조회 | Public | `200 OK` |
 | `POST` | `/api/reviews` | 리뷰 작성 | `MEMBER` | `201 Created` |
+| `POST` | `/api/reviews/{reviewId}/recommendations` | 리뷰 추천 | `MEMBER` | `201 Created` |
 | `PATCH` | `/api/reviews/{reviewId}` | 리뷰 수정 | 작성자 `MEMBER` | `200 OK` |
 | `DELETE` | `/api/reviews/{reviewId}` | 리뷰 삭제 | 작성자 `MEMBER` | `204 No Content` |
 | `GET` | `/api/reviews/{reviewId}/comments` | 특정 리뷰의 댓글 목록 조회 | Public | `200 OK` |
 | `POST` | `/api/reviews/{reviewId}/comments` | 댓글 작성 | `MEMBER` | `201 Created` |
+| `POST` | `/api/comments/{commentId}/recommendations` | 댓글 추천 | `MEMBER` | `201 Created` |
 | `PATCH` | `/api/comments/{commentId}` | 댓글 수정 | 작성자 `MEMBER` | `200 OK` |
 | `DELETE` | `/api/comments/{commentId}` | 댓글 삭제 | 작성자 `MEMBER` | `204 No Content` |
 
@@ -408,13 +412,20 @@ Member의 내부 DB ID는 일반 클라이언트 요청에서 직접 사용할 �
 
 ## V1에서 제공하지 않는 API
 
-- 좋아요
 - 팔로우
 - 대댓글
 - 회원 탈퇴
 - 관리자 및 모더레이션
 - 이미지 직접 업로드
 - 개인화 추천
+
+## 추천 API
+
+`POST /api/reviews/{reviewId}/recommendations`와 `POST /api/comments/{commentId}/recommendations`는 현재 `MEMBER`의 추천 기록을 생성한다. 성공 시 `201 Created`와 대상 ID, 최신 `recommendationCount`, `recommendedByMe: true`를 반환한다. CSRF 보호가 적용된다.
+
+같은 회원이 같은 대상에 다시 요청하면 `409 {"code":"DUPLICATE_RECOMMENDATION"}`이며, 추천 취소 `DELETE` API는 제공하지 않는다. `ANONYMOUS`는 401, `SIGNUP_REQUIRED`는 403이다. 리뷰/댓글 상세 응답은 `recommendationCount`와 로그인한 현재 회원 기준의 `recommendedByMe`를 포함한다.
+
+`GET /api/members/me/recommendations/reviews`와 `GET /api/members/me/recommendations/comments`는 각각 추천한 리뷰·댓글을 반환한다. 두 API는 기존 마이페이지 활동 목록과 같은 `page`, `size`, `totalElements`, `totalPages` 형식을 사용하고, 추천 생성 시각 내림차순으로 정렬한다. 대상 회원 ID는 요청으로 받지 않는다.
 
 ## Open Questions
 

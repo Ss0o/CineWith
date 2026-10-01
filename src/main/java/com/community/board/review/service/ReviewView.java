@@ -14,10 +14,16 @@ public record ReviewView(
         String content,
         BigDecimal rating,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long recommendationCount,
+        boolean recommendedByMe
 ) {
 
     public static ReviewView from(Review review) {
+        return from(review, 0, false);
+    }
+
+    public static ReviewView from(Review review, long recommendationCount, boolean recommendedByMe) {
         return new ReviewView(
                 review.getId(),
                 review.getMovie().getTmdbId(),
@@ -27,7 +33,7 @@ public record ReviewView(
                 review.getContent(),
                 review.getRating(),
                 review.getCreatedAt(),
-                review.getUpdatedAt()
+                review.getUpdatedAt(), recommendationCount, recommendedByMe
         );
     }
 }

@@ -12,7 +12,7 @@ public record ReviewFeedPage(
         int totalPages
 ) {
 
-    static ReviewFeedPage from(Page<ReviewFeedItem> reviews) {
+    public static ReviewFeedPage from(Page<ReviewFeedItem> reviews) {
         return new ReviewFeedPage(
                 reviews.getContent(),
                 reviews.getNumber(),

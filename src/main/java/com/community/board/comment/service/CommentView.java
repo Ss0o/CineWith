@@ -10,17 +10,23 @@ public record CommentView(
         String authorNickname,
         String content,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long recommendationCount,
+        boolean recommendedByMe
 ) {
 
     public static CommentView from(Comment comment) {
+        return from(comment, 0, false);
+    }
+
+    public static CommentView from(Comment comment, long recommendationCount, boolean recommendedByMe) {
         return new CommentView(
                 comment.getId(),
                 comment.getReview().getId(),
                 comment.getMember().getNickname(),
                 comment.getContent(),
                 comment.getCreatedAt(),
-                comment.getUpdatedAt()
+                comment.getUpdatedAt(), recommendationCount, recommendedByMe
         );
     }
 }

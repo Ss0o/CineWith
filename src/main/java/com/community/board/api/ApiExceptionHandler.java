@@ -16,6 +16,7 @@ import com.community.board.review.domain.InvalidReviewRatingException;
 import com.community.board.review.domain.InvalidReviewUpdateException;
 import com.community.board.review.service.ReviewNotFoundException;
 import com.community.board.review.service.ReviewOwnershipException;
+import com.community.board.recommendation.service.DuplicateRecommendationException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DuplicateReviewException.class)
     ResponseEntity<ApiErrorResponse> handleDuplicateReview(DuplicateReviewException exception) {
         return error(HttpStatus.CONFLICT, "DUPLICATE_REVIEW", exception.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateRecommendationException.class)
+    ResponseEntity<ApiErrorResponse> handleDuplicateRecommendation(DuplicateRecommendationException exception) {
+        return error(HttpStatus.CONFLICT, "DUPLICATE_RECOMMENDATION", exception.getMessage());
     }
 
     @ExceptionHandler(ReviewOwnershipException.class)
